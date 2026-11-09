@@ -19,7 +19,7 @@ def test_adapter_escapes_query_sets_user_agent_and_spaces_requests():
     client = MusicBrainzClient(request_bytes=request, clock=lambda: now[0], sleeper=lambda s: (slept.append(s), now.__setitem__(0, now[0] + s)))
     asyncio.run(client.search_artists('A "Band"'))
     asyncio.run(client.search_artists("Again"))
-    assert 'artist%3A%22A%20%5C%22Band%5C%22%22' in calls[0][0]
+    assert "query=A%20%5C%22Band%5C%22" in calls[0][0]
     assert "Popcorn/0.1.0" in calls[0][1]["User-Agent"]
     assert slept == [1.0]
 

@@ -58,8 +58,10 @@ class MusicBrainzClient:
         return data
 
     async def search_artists(self, query: str) -> list[dict[str, Any]]:
-        escaped = "".join("\\" + c if c in '+-&|!(){}[]^"~*?:\\' else c for c in query)
-        data = self._get("artist/", {"query": f'artist:"{escaped}"', "fmt": "json", "limit": "8"})
+        # Keep Lucene operators and metacharacters from user input inert, but
+        # leave the terms unquoted so aliases and multi-word names can match.
+        escaped = "".join("\\" + c if c in '+-&|!(){}[]^"~*?:\\/' else c for c in query)
+        data = self._get("artist/", {"query": escaped, "fmt": "json", "limit": "8"})
         results = data.get("artists")
         if not isinstance(results, list) or any(not isinstance(x, dict) for x in results):
             raise MusicBrainzError("MusicBrainz returned an unexpected artist search response.")
