@@ -13,8 +13,11 @@ from starlette.routing import Route
 from popcorn.agent import answer
 
 INDEX_FILE = Path(__file__).resolve().parent / "static" / "index.html"
-MAX_REQUEST_BYTES = 8_192
+MAX_REQUEST_BYTES = 40_960
 MAX_QUESTION_LENGTH = 500
+MAX_HISTORY_MESSAGES = 8
+MAX_HISTORY_MESSAGE_LENGTH = 2_000
+MAX_HISTORY_CHARS = 8_000
 
 
 async def homepage(_request: Request) -> Response:
@@ -53,7 +56,28 @@ async def chat(request: Request) -> Response:
             status_code=413,
         )
 
-    reply, trace = await answer(question)
+    history = data.get("history", [])
+    if not isinstance(history, list) or len(history) > MAX_HISTORY_MESSAGES:
+        return JSONResponse({"error": "Conversation context is invalid or too long."}, status_code=400)
+    normalized_history: list[dict[str, str]] = []
+    history_chars = 0
+    expected_role = "user"
+    for item in history:
+        if (not isinstance(item, dict) or item.get("role") != expected_role
+                or not isinstance(item.get("content"), str)):
+            return JSONResponse({"error": "Conversation context must contain alternating user and assistant messages."}, status_code=400)
+        content = item["content"].strip()
+        if not content or len(content) > MAX_HISTORY_MESSAGE_LENGTH:
+            return JSONResponse({"error": "A conversation message is empty or too long."}, status_code=400)
+        history_chars += len(content)
+        if history_chars > MAX_HISTORY_CHARS:
+            return JSONResponse({"error": "Conversation context is too long."}, status_code=413)
+        normalized_history.append({"role": expected_role, "content": content})
+        expected_role = "assistant" if expected_role == "user" else "user"
+    if history and expected_role != "user":
+        return JSONResponse({"error": "Conversation context must end with an assistant message."}, status_code=400)
+
+    reply, trace = await answer(question, history=normalized_history)
     return JSONResponse({"reply": reply, "trace": trace.to_dict()})
 
 

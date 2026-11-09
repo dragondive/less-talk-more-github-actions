@@ -267,6 +267,33 @@ def test_gemini_selects_lastfm_music_recommendations(monkeypatch):
     assert [e.attributes.get("tool") for e in trace.events if e.name == "mcp.tool.call"] == ["get_lastfm_recommendations"]
 
 
+def test_answer_includes_bounded_conversation_history_in_llm_messages(monkeypatch):
+    monkeypatch.setattr(llm, "active_provider_name", lambda: "gemini")
+    monkeypatch.setattr(gemini, "model_name", lambda: "gemini-test-model")
+    captured = {}
+
+    async def fake_completion(messages, tools, *, model):
+        captured["messages"] = messages
+        return {"choices": [{"message": {"content": "The sequel is The Matrix Reloaded."}}]}
+
+    monkeypatch.setattr(gemini, "chat_completion", fake_completion)
+    history = [
+        {"role": "user", "content": f"Earlier question {i}"} if i % 2 == 0
+        else {"role": "assistant", "content": f"Earlier answer {i}"}
+        for i in range(12)
+    ]
+    response, trace = asyncio.run(answer("What about the sequel?", history=history))
+    messages = captured["messages"]
+    assert response == "The sequel is The Matrix Reloaded."
+    assert messages[0]["role"] == "system"
+    assert messages[-1] == {"role": "user", "content": "What about the sequel?"}
+    assert len(messages[1:-1]) == 8
+    assert messages[1]["content"] == "Earlier question 4"
+    assert messages[-2]["content"] == "Earlier answer 11"
+    run_event = next(event for event in trace.events if event.name == "agent.run")
+    assert run_event.attributes["history_messages"] == 8
+
+
 def test_gemini_selects_anime_skill_through_anilist_mcp(monkeypatch):
     monkeypatch.setattr(llm, "active_provider_name", lambda: "gemini")
     monkeypatch.setattr(gemini, "model_name", lambda: "gemini-test-model")
