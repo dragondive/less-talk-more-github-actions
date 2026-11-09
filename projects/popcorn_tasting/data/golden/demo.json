@@ -1,0 +1,26 @@
+{
+  "version": "0.1",
+  "description": "Tiny local fixtures for the first Popcorn end-to-end evaluation.",
+  "cases": [
+    {
+      "id": "hello-world",
+      "input": "Hello Maya",
+      "expected_response": "Hello, Maya! Welcome to Popcorn.",
+      "expected_skills": ["greeting"],
+      "expected_tools": ["say_hello"]
+    },
+    {
+      "id": "movie-fit-rubric",
+      "input": "Movie fit: The Matrix",
+      "expected_skills": ["movie_fit"],
+      "expected_tools": ["get_movie_profile"],
+      "rubric": {
+        "minimum_score": 0.7,
+        "sample_responses": [
+          "The Matrix could suit action fans. Its science fiction story is intense and fast-paced.",
+          "Action lovers enjoy the dark science fiction tone."
+        ]
+      }
+    }
+  ]
+}

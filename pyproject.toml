@@ -1,0 +1,2 @@
+[tool.pytest.ini_options]
+testpaths = ["projects/popcorn/tests", "projects/popcorn_tasting/tests", "tests"]

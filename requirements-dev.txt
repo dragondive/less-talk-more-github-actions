@@ -1,0 +1,3 @@
+-e ./projects/popcorn
+-e ./projects/popcorn_tasting
+pytest==8.4.2
