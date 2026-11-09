@@ -50,6 +50,29 @@ class FakeTMDB:
         return {"status_message": "Success"}
 
 
+class FakeAniList:
+    async def search_media(self, query, media_type):
+        return [{"id": 1, "type": media_type, "title": {"english": "Cowboy Bebop"}, "format": "TV", "startDate": {"year": 1998}, "siteUrl": "https://anilist.co/anime/1"}]
+
+    async def media_details(self, identity, media_type):
+        return {"id": identity, "title": {"english": "Cowboy Bebop"}, "format": "TV", "status": "FINISHED", "description": "A space western.", "startDate": {"year": 1998}, "genres": ["Adventure"], "relations": {"edges": [{"relationType": "PREQUEL", "node": {"id": 2, "title": {"english": "Example Prequel"}, "siteUrl": "https://anilist.co/anime/2"}}]}, "characters": {"edges": [{"role": "MAIN", "node": {"id": 3, "name": {"full": "Spike Spiegel"}, "siteUrl": "https://anilist.co/character/3"}}]}, "siteUrl": "https://anilist.co/anime/1"}
+
+    async def discover_media(self, media_type, filters):
+        return [{"id": 1, "type": media_type, "format": "TV", "title": {"english": "Cowboy Bebop"}, "siteUrl": "https://anilist.co/anime/1"}]
+
+    async def search_character(self, query):
+        return [{"id": 3, "name": {"full": "Spike Spiegel"}, "siteUrl": "https://anilist.co/character/3"}]
+
+    async def character_details(self, identity):
+        return {"id": identity, "name": {"full": "Spike Spiegel"}, "description": "A bounty hunter.", "media": {"nodes": [{"id": 1, "type": "ANIME", "title": {"english": "Cowboy Bebop"}, "siteUrl": "https://anilist.co/anime/1"}]}, "siteUrl": "https://anilist.co/character/3"}
+
+    async def search_staff(self, query):
+        return [{"id": 4, "name": {"full": "Yoko Kanno"}, "siteUrl": "https://anilist.co/staff/4"}]
+
+    async def staff_details(self, identity):
+        return {"id": identity, "name": {"full": "Yoko Kanno"}, "primaryOccupations": ["Composer"], "staffMedia": {"edges": [{"staffRole": "Music", "node": {"id": 1, "type": "ANIME", "title": {"english": "Cowboy Bebop"}, "siteUrl": "https://anilist.co/anime/1"}}]}, "characterMedia": {"edges": [{"characterName": "Faye Valentine", "node": {"id": 1, "type": "ANIME", "title": {"english": "Cowboy Bebop"}, "siteUrl": "https://anilist.co/anime/1"}}]}, "siteUrl": "https://anilist.co/staff/4"}
+
+
 @pytest.fixture(autouse=True)
 def settings_use_test_defaults(monkeypatch):
     monkeypatch.setattr(llm, "configured_value", lambda _name: "")
@@ -86,7 +109,7 @@ def test_unsupported_intent_does_not_call_mcp(monkeypatch):
     monkeypatch.setattr(gemini, "api_key", lambda: "")
     monkeypatch.setattr(deepseek, "api_key", lambda: "")
     response, trace = asyncio.run(answer("Hello there"))
-    assert "movie or TV details" in response
+    assert "movie, TV, anime, or manga details" in response
     assert not any(event.name == "mcp.tool.call" for event in trace.events)
 
 
@@ -188,6 +211,50 @@ def test_gemini_selects_tv_skill_and_runs_tmdb_mcp_flow(monkeypatch):
     assert "fantasy drama" in response
     assert [event.attributes.get("tool") for event in trace.events if event.name == "mcp.tool.call"] == ["search_tv", "get_tv_details"]
     assert any(event.attributes.get("skill") == "tv_discovery" for event in trace.events)
+
+
+def test_gemini_selects_anime_skill_through_anilist_mcp(monkeypatch):
+    monkeypatch.setattr(llm, "active_provider_name", lambda: "gemini")
+    monkeypatch.setattr(gemini, "model_name", lambda: "gemini-test-model")
+    monkeypatch.setattr(mcp_server, "AniListClient", FakeAniList)
+    calls = iter([
+        {"choices": [{"message": {"content": None, "tool_calls": [{"id": "anime1", "function": {"name": "anime_manga_discovery", "arguments": '{"title":"Cowboy Bebop","media":"ANIME"}'}}]}}]},
+        {"choices": [{"message": {"content": "Cowboy Bebop is a 1998 adventure anime."}}]},
+    ])
+    async def fake_completion(messages, tools, *, model):
+        assert any(tool["function"]["name"] == "anime_manga_discovery" for tool in tools)
+        return next(calls)
+    monkeypatch.setattr(gemini, "chat_completion", fake_completion)
+    response, trace = asyncio.run(answer("Tell me about Cowboy Bebop anime"))
+    assert "1998 adventure anime" in response
+    tool_events = [event for event in trace.events if event.name == "mcp.tool.call"]
+    assert [event.attributes.get("tool") for event in tool_events] == ["search_anilist_media", "get_anilist_media_details"]
+    assert all(event.attributes.get("server") == "popcorn-discovery" and event.attributes.get("provider") == "AniList" for event in tool_events)
+    assert any(event.attributes.get("skill") == "anime_manga_discovery" for event in trace.events)
+
+
+@pytest.mark.parametrize(("tool_name", "arguments", "wanted_skill", "expected_tools"), [
+    ("anilist_filtered_discovery", '{"media_type":"ANIME","genre":"Adventure"}', "anilist_filtered_discovery", ["discover_anilist_media"]),
+    ("anilist_character_exploration", '{"name":"Spike Spiegel"}', "anilist_character_exploration", ["search_anilist_characters", "get_anilist_character_details"]),
+    ("anilist_staff_exploration", '{"name":"Yoko Kanno"}', "anilist_staff_exploration", ["search_anilist_staff", "get_anilist_staff_details"]),
+    ("anilist_relation_exploration", '{"title":"Cowboy Bebop","media_type":"ANIME"}', "anilist_relation_exploration", ["search_anilist_media", "get_anilist_media_details"]),
+])
+def test_anilist_capability_tools_call_their_skills_and_mcp_tools(monkeypatch, tool_name, arguments, wanted_skill, expected_tools):
+    monkeypatch.setattr(llm, "active_provider_name", lambda: "gemini")
+    monkeypatch.setattr(gemini, "model_name", lambda: "gemini-test-model")
+    monkeypatch.setattr(mcp_server, "AniListClient", FakeAniList)
+    calls = iter([
+        {"choices": [{"message": {"content": None, "tool_calls": [{"id": "anilist1", "function": {"name": tool_name, "arguments": arguments}}]}}]},
+        {"choices": [{"message": {"content": "Here are the AniList results."}}]},
+    ])
+    async def fake_completion(messages, tools, *, model):
+        assert any(tool["function"]["name"] == tool_name for tool in tools)
+        return next(calls)
+    monkeypatch.setattr(gemini, "chat_completion", fake_completion)
+    response, trace = asyncio.run(answer("Please explore AniList."))
+    assert response == "Here are the AniList results."
+    assert [event.attributes.get("tool") for event in trace.events if event.name == "mcp.tool.call"] == expected_tools
+    assert any(event.attributes.get("skill") == wanted_skill for event in trace.events)
 
 
 def test_explicit_rating_runs_title_match_then_guest_rating_mcp_tool(monkeypatch):

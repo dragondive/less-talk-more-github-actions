@@ -9,8 +9,9 @@ from mcp.server import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
 from popcorn.tmdb import TMDBClient, TMDBError
+from popcorn.anilist import AniListClient, AniListError
 
-mcp = MCPServer("popcorn-tmdb")
+mcp = MCPServer("popcorn-discovery")
 T = TypeVar("T")
 
 
@@ -19,6 +20,159 @@ async def _provider_call(awaitable: Awaitable[T]) -> T:
         return await awaitable
     except TMDBError as error:
         raise ToolError(str(error)) from None
+
+
+async def _anilist_call(awaitable: Awaitable[T]) -> T:
+    try:
+        return await awaitable
+    except AniListError as error:
+        raise ToolError(str(error)) from None
+
+
+@mcp.tool()
+async def search_anilist_media(query: str, media_type: str) -> dict[str, Any]:
+    """Search public AniList anime or manga records by title."""
+    if not query.strip() or len(query) > 200:
+        raise ToolError("query must be a non-empty title under 200 characters")
+    if media_type not in {"ANIME", "MANGA"}:
+        raise ToolError("media_type must be ANIME or MANGA")
+    results = await _anilist_call(AniListClient().search_media(query, media_type))
+    return {"provider": "AniList", "results": [
+        {"id": item.get("id"), "title": item.get("title", {}), "format": item.get("format"),
+         "year": (item.get("startDate") or {}).get("year"), "status": item.get("status"),
+         "source_url": item.get("siteUrl")} for item in results[:8]
+    ]}
+
+
+@mcp.tool()
+async def get_anilist_media_details(identity: int, media_type: str) -> dict[str, Any]:
+    """Retrieve public AniList anime/manga details, relations and characters by ID."""
+    if identity < 1 or media_type not in {"ANIME", "MANGA"}:
+        raise ToolError("Provide a positive AniList ID and media_type ANIME or MANGA")
+    item = await _anilist_call(AniListClient().media_details(identity, media_type))
+    date = item.get("startDate") if isinstance(item.get("startDate"), dict) else {}
+    relation_edges = (item.get("relations") or {}).get("edges", [])
+    relations = [{"relation": edge.get("relationType"), "title": _anilist_title(edge.get("node", {}).get("title")),
+                  "source_url": edge.get("node", {}).get("siteUrl")}
+                 for edge in relation_edges if isinstance(edge, dict) and isinstance(edge.get("node"), dict)]
+    character_edges = (item.get("characters") or {}).get("edges", [])
+    characters = [{"name": ((edge.get("node") or {}).get("name") or {}).get("full"),
+                   "role": edge.get("role"), "source_url": (edge.get("node") or {}).get("siteUrl")}
+                  for edge in character_edges if isinstance(edge, dict)]
+    return {"provider": "AniList", "id": item.get("id"), "title": _anilist_title(item.get("title")),
+            "year": date.get("year"), "format": item.get("format"), "status": item.get("status"),
+            "description": item.get("description"), "genres": item.get("genres", []),
+            "average_score": item.get("averageScore"), "episodes": item.get("episodes"),
+            "chapters": item.get("chapters"), "volumes": item.get("volumes"),
+            "relations": relations[:10], "characters": characters[:8], "source_url": item.get("siteUrl")}
+
+
+@mcp.tool()
+async def discover_anilist_media(media_type: str, genre: str | None = None, country: str | None = None,
+                                 format: str | None = None, status: str | None = None,
+                                 season: str | None = None, year: int | None = None) -> dict[str, Any]:
+    """Discover popular public AniList anime or manga using genre, country, format, status, or season filters."""
+    _validate_anilist_filter(media_type, genre, country, format, status, season, year)
+    filters = {"genre": genre, "country": country.upper() if country else None,
+               "format": format, "status": status, "season": season, "year": year}
+    results = await _anilist_call(AniListClient().discover_media(media_type, filters))
+    return {"provider": "AniList", "filters": {key: value for key, value in filters.items() if value is not None},
+            "results": [_anilist_media_summary(item) for item in results[:10]]}
+
+
+@mcp.tool()
+async def search_anilist_characters(query: str) -> dict[str, Any]:
+    """Search public AniList characters by name."""
+    _validate_anilist_query(query)
+    results = await _anilist_call(AniListClient().search_character(query))
+    return {"provider": "AniList", "results": [
+        {"id": item.get("id"), "name": (item.get("name") or {}).get("full"),
+         "native_name": (item.get("name") or {}).get("native"), "source_url": item.get("siteUrl")}
+        for item in results[:8]]}
+
+
+@mcp.tool()
+async def get_anilist_character_details(identity: int) -> dict[str, Any]:
+    """Get public AniList character description and anime/manga appearances."""
+    if identity < 1:
+        raise ToolError("Provide a positive AniList character ID")
+    item = await _anilist_call(AniListClient().character_details(identity))
+    media = item.get("media") or {}
+    appearances = [_anilist_media_summary(x) for x in media.get("nodes", []) if isinstance(x, dict)]
+    name = item.get("name") or {}
+    return {"provider": "AniList", "id": item.get("id"), "name": name.get("full"),
+            "description": item.get("description"), "gender": item.get("gender"),
+            "age": item.get("age"), "appearances": appearances, "source_url": item.get("siteUrl")}
+
+
+@mcp.tool()
+async def search_anilist_staff(query: str) -> dict[str, Any]:
+    """Search public AniList voice actors and production staff by name."""
+    _validate_anilist_query(query)
+    results = await _anilist_call(AniListClient().search_staff(query))
+    return {"provider": "AniList", "results": [
+        {"id": item.get("id"), "name": (item.get("name") or {}).get("full"),
+         "occupations": item.get("primaryOccupations", []), "language": item.get("languageV2"),
+         "source_url": item.get("siteUrl")} for item in results[:8]]}
+
+
+@mcp.tool()
+async def get_anilist_staff_details(identity: int) -> dict[str, Any]:
+    """Get public AniList staff roles and credited anime/manga."""
+    if identity < 1:
+        raise ToolError("Provide a positive AniList staff ID")
+    item = await _anilist_call(AniListClient().staff_details(identity))
+    credits = (item.get("staffMedia") or {}).get("edges", [])
+    voice_credits = (item.get("characterMedia") or {}).get("edges", [])
+    name = item.get("name") or {}
+    return {"provider": "AniList", "id": item.get("id"), "name": name.get("full"),
+            "description": item.get("description"), "occupations": item.get("primaryOccupations", []),
+            "language": item.get("languageV2"), "credits": [
+                {"role": edge.get("staffRole"), **_anilist_media_summary(edge.get("node", {}))}
+                for edge in credits if isinstance(edge, dict) and isinstance(edge.get("node"), dict)
+            ][:10], "voice_credits": [
+                {"character": edge.get("characterName") or next((c.get("name", {}).get("full") for c in edge.get("characters", []) if isinstance(c, dict)), None),
+                 **_anilist_media_summary(edge.get("node", {}))}
+                for edge in voice_credits if isinstance(edge, dict) and isinstance(edge.get("node"), dict)
+            ][:10], "source_url": item.get("siteUrl")}
+
+
+def _validate_anilist_query(query: str) -> None:
+    if not query.strip() or len(query) > 200:
+        raise ToolError("query must be non-empty and under 200 characters")
+
+
+def _validate_anilist_filter(media_type: str, genre: str | None, country: str | None,
+                             format: str | None, status: str | None,
+                             season: str | None, year: int | None) -> None:
+    if media_type not in {"ANIME", "MANGA"}:
+        raise ToolError("media_type must be ANIME or MANGA")
+    if genre is not None and (not genre.strip() or len(genre) > 80):
+        raise ToolError("genre must be a non-empty AniList genre name under 80 characters")
+    if country is not None and (len(country) != 2 or not country.isalpha()):
+        raise ToolError("country must be a two-letter country code")
+    if format is not None and format not in {"TV", "TV_SHORT", "MOVIE", "SPECIAL", "OVA", "ONA", "MUSIC", "MANGA", "NOVEL", "ONE_SHOT"}:
+        raise ToolError("format must be a supported AniList media format")
+    if status is not None and status not in {"FINISHED", "RELEASING", "NOT_YET_RELEASED", "CANCELLED", "HIATUS"}:
+        raise ToolError("status must be a supported AniList media status")
+    if season is not None and season not in {"WINTER", "SPRING", "SUMMER", "FALL"}:
+        raise ToolError("season must be WINTER, SPRING, SUMMER, or FALL")
+    if year is not None and (year < 1900 or year > 2200):
+        raise ToolError("year must be between 1900 and 2200")
+    if year is not None and season is None:
+        raise ToolError("season is required when filtering by year")
+
+
+def _anilist_media_summary(item: dict[str, Any]) -> dict[str, Any]:
+    return {"id": item.get("id"), "type": item.get("type"), "title": _anilist_title(item.get("title")),
+            "format": item.get("format"), "status": item.get("status"),
+            "year": (item.get("startDate") or {}).get("year"), "source_url": item.get("siteUrl")}
+
+
+def _anilist_title(titles: object) -> str:
+    if not isinstance(titles, dict):
+        return "Untitled"
+    return str(titles.get("english") or titles.get("romaji") or titles.get("native") or "Untitled")
 
 
 @mcp.tool()

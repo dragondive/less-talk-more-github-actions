@@ -88,7 +88,7 @@ Connect the initial entertainment data sources behind replaceable adapters.
 
 ### Providers
 - [ ] TMDB — movies and TV.
-- [ ] AniList — anime and manga.
+- [ ] AniList — anime and manga (read-only adapter and skill implemented; live check pending).
 - [ ] MusicBrainz — music.
 - [ ] IGDB — video games.
 
@@ -99,6 +99,8 @@ Connect the initial entertainment data sources behind replaceable adapters.
 - [x] Implement environment-based TMDB credential handling.
 - [x] Add timeouts, error handling and rate-limit messaging.
 - [x] Add mocked tests for success, malformed responses, and authentication failures.
+- [x] Add read-only AniList GraphQL adapter and MCP tools for title search/details, filtered discovery, character search/details, and staff search/details with mocked tests.
+- [ ] Run an optional live connectivity check for AniList; public reads do not require credentials.
 - [ ] Add additional mocked cases for empty search results and transient provider failures.
 - [ ] Run an optional live connectivity check when TMDB access is configured.
 
@@ -126,7 +128,11 @@ Deliver useful domain-specific discovery with a small, testable skill set.
 - [x] Explicit guest ratings for movies, TV series, and episodes.
 - [x] TMDB similar/recommended titles and collection/franchise lookup.
 - [x] Country-specific movie/TV watch-provider lookup with JustWatch attribution.
-- [ ] Anime and manga discovery.
+- [x] Anime and manga title discovery and selected-record details through AniList (live check pending).
+- [x] Filtered anime/manga discovery by genre, country, format, status, and season/year.
+- [x] Character search and AniList-listed appearance exploration.
+- [x] Staff search with production and voice-credit exploration.
+- [x] Explicit AniList relation exploration for adaptations, sequels, and related works.
 - [ ] Music discovery.
 - [ ] Game discovery.
 - [x] TMDB movie collection/franchise exploration (cross-domain franchise links remain future work).

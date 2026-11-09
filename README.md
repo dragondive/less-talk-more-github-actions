@@ -1,6 +1,6 @@
 # Popcorn
 
-Popcorn is an entertainment discovery agent. Its current real-data slice connects movie and TV lookup, filtered discovery, person credits, TMDB language/country/genre references, related titles, franchise collections, watch availability, and explicit guest ratings through Popcorn's MCP tools. Popcorn Tasting remains separate and deferred while the agent is built out.
+Popcorn is an entertainment discovery agent. Its current real-data slice connects movie and TV lookup, filtered discovery, person credits, TMDB references, related titles, franchise collections, watch availability, explicit guest ratings, and AniList anime/manga discovery through Popcorn's MCP tools. Popcorn Tasting remains separate and deferred while the agent is built out.
 
 ## Configure TMDB
 
@@ -41,7 +41,9 @@ python3 -m pytest projects/popcorn/tests
 uvicorn popcorn.web:app --host 127.0.0.1 --port 8000
 ```
 
-Open `http://127.0.0.1:8000`. The configured Gemini or DeepSeek model selects among Popcorn skills, which invoke Popcorn's TMDB MCP tools. Without a model key, the CLI and chat app retain the small deterministic router. The chat app exposes structured execution traces from `/api/chat` and does not retain conversation history. When enabled, the user's message is sent to the selected model provider.
+Open `http://127.0.0.1:8000`. The configured Gemini or DeepSeek model selects among Popcorn skills, which invoke Popcorn's TMDB or AniList MCP tools. Without a model key, the CLI and chat app retain the small deterministic router. The chat app exposes structured execution traces from `/api/chat` and does not retain conversation history. When enabled, the user's message is sent to the selected model provider.
+
+Try prompts such as “Recommend popular adventure anime from Japan,” “Which anime feature Spike Spiegel?”, “Which anime did Yoko Kanno work on?”, or “What is related to Cowboy Bebop?” The staff workflow can return production and AniList-listed voice credits; the exact prompt result depends on AniList's records.
 
 Without an LLM key, the deterministic router supports movie details/cast lookup and a person's movie/TV acting credits. Model-backed requests also support TV details, filtered discovery, and reference-code lookup. Searches show candidate choices when a title or person is ambiguous. Normal tests use mocked provider responses and need no credential or network.
 
@@ -58,8 +60,15 @@ Without an LLM key, the deterministic router supports movie details/cast lookup 
 | Franchise exploration | `search_collections`, `get_collection_details` | Find a TMDB collection and list its constituent movies |
 | Watch availability | `get_watch_providers` | Find streaming/rental/purchase availability by country; attribute JustWatch via TMDB |
 | Guest ratings | `search_movies`, `search_tv`, `rate_movie`, `rate_tv`, `rate_tv_episode` | Submit ratings only on explicit request, after an unambiguous title match |
+| Anime and manga title discovery | `search_anilist_media`, `get_anilist_media_details` | Search AniList, resolve ambiguity, return synopsis, metadata, characters and related media |
+| Filtered anime/manga discovery | `discover_anilist_media` | Discover by genre, country, format, status, season and year |
+| Character exploration | `search_anilist_characters`, `get_anilist_character_details` | Search a character and list the media appearances AniList associates with them |
+| Staff exploration | `search_anilist_staff`, `get_anilist_staff_details` | Search creators/voice actors and list production roles and voice credits |
+| Anime/manga relations | `search_anilist_media`, `get_anilist_media_details` | Show AniList relation edges such as adaptations, prequels, sequels and spin-offs |
 
-The standalone MCP server can be launched with `popcorn-mcp` after installation. It uses the MCP stdio transport. Popcorn's CLI currently hosts the same MCP tools in process through the official Python SDK client; stdio hosting is available for other MCP-compatible hosts but has not yet been validated end to end.
+The standalone MCP server can be launched with `popcorn-mcp` after installation. It uses the MCP stdio transport. Popcorn's CLI currently hosts the same discovery tools in process through the official Python SDK client; stdio hosting is available for other MCP-compatible hosts but has not yet been validated end to end. AniList public reads require no credential.
+
+The AniList tool-to-skill inventory and demo prompts are in [the AniList coverage map](docs/provider-coverage/anilist.md).
 
 ## Attribution
 
@@ -75,7 +84,7 @@ Copy the service's Deploy Hook URL from Render's Settings and add it to the GitH
 
 ```text
 projects/
-  popcorn/          # agent, skills, TMDB adapter, MCP server, and tests
+  popcorn/          # agent, skills, provider adapters, MCP tools, and tests
   popcorn_tasting/  # separate evaluation project, to be resumed later
 tests/integration/  # shared repository checks
 .github/            # shared repository automation
@@ -86,7 +95,7 @@ docs/               # decisions and project guidance
 
 - Gemini or DeepSeek is selected through `LLM_PROVIDER`; without an explicit choice, a configured Gemini key takes precedence over a DeepSeek key. The deterministic router remains as a fallback when neither key is configured. Conversation history is not retained, so each turn is independent.
 - User questions are sent to the selected model when enabled. The app does not persist chat history.
-- TMDB-backed movie and TV discovery, related-title recommendations, and collection lookup are implemented; anime/manga, music, games, cross-domain links, and images are not.
+- TMDB-backed movie/TV workflows and several read-only AniList anime/manga skills are implemented; music, games, cross-domain links, and images are not. AniList live connectivity has not yet been validated. Its adult-content filter may not exclude every mature entry.
 - TMDB guest ratings are write operations. Popcorn only submits one when the user explicitly asks, and it creates a temporary guest session for that submission.
 - Movie/person matching uses simple exact-name preference and otherwise asks the user to disambiguate. It does not infer identity from similar names.
 - TMDB data can be incomplete. Actor credits are described as the credits TMDB lists, not a complete filmography.

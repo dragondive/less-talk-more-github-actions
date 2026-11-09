@@ -32,6 +32,13 @@ def test_mcp_server_exposes_tmdb_discovery_tools():
         "get_watch_providers",
         "search_collections",
         "get_collection_details",
+        "search_anilist_media",
+        "get_anilist_media_details",
+        "discover_anilist_media",
+        "search_anilist_characters",
+        "get_anilist_character_details",
+        "search_anilist_staff",
+        "get_anilist_staff_details",
     }
 
 
