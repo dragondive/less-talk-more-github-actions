@@ -7,8 +7,8 @@ SKILL_NAME = "movie_discovery"
 ToolInvoker = Callable[[str, dict[str, object]], Awaitable[Any]]
 
 
-async def run(title: str, invoke: ToolInvoker) -> str:
-    found = await invoke("search_movies", {"query": title})
+async def run(title: str, invoke: ToolInvoker, language: str = "en-US") -> str:
+    found = await invoke("search_movies", {"query": title, "language": language})
     candidates = found.get("results", []) if isinstance(found, dict) else []
     if not candidates:
         return f"I couldn't find a movie matching {title!r} in TMDB."
@@ -22,7 +22,7 @@ async def run(title: str, invoke: ToolInvoker) -> str:
         )
         return f"I found several possible matches for {title!r}. Which one did you mean? {choices}"
 
-    details = await invoke("get_movie_details", {"movie_id": selected["id"]})
+    details = await invoke("get_movie_details", {"movie_id": selected["id"], "language": language})
     if not isinstance(details, dict):
         return "TMDB returned movie details in an unexpected format."
     year = str(details.get("release_date", ""))[:4] or "release year unknown"

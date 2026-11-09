@@ -22,9 +22,9 @@ async def _provider_call(awaitable: Awaitable[T]) -> T:
 
 
 @mcp.tool()
-async def search_movies(query: str, year: int | None = None) -> dict[str, Any]:
+async def search_movies(query: str, year: int | None = None, language: str = "en-US") -> dict[str, Any]:
     """Search TMDB movie titles and return candidate IDs, release years, and summaries."""
-    results = await _provider_call(TMDBClient().search_movies(query, year))
+    results = await _provider_call(TMDBClient().search_movies(query, year, language))
     return {
         "provider": "TMDB",
         "results": [
@@ -42,9 +42,9 @@ async def search_movies(query: str, year: int | None = None) -> dict[str, Any]:
 
 
 @mcp.tool()
-async def get_movie_details(movie_id: int) -> dict[str, Any]:
+async def get_movie_details(movie_id: int, language: str = "en-US") -> dict[str, Any]:
     """Fetch TMDB movie details and credited cast for a TMDB movie ID."""
-    item = await _provider_call(TMDBClient().movie_details(movie_id))
+    item = await _provider_call(TMDBClient().movie_details(movie_id, language))
     credits = item.get("credits") if isinstance(item.get("credits"), dict) else {}
     cast = credits.get("cast") if isinstance(credits.get("cast"), list) else []
     return {
@@ -107,6 +107,186 @@ async def get_person_movie_credits(person_id: int) -> dict[str, Any]:
             for work in works[:20]
         ],
     }
+
+
+@mcp.tool()
+async def search_tv(query: str, year: int | None = None, language: str = "en-US") -> dict[str, Any]:
+    """Search TMDB television series by title and optional first-air year."""
+    results = await _provider_call(TMDBClient().search_tv(query, year, language))
+    return {"provider": "TMDB", "results": [
+        {"id": item.get("id"), "name": item.get("name"), "first_air_date": item.get("first_air_date", ""),
+         "overview": item.get("overview", ""), "vote_average": item.get("vote_average"),
+         "source_url": _tmdb_url("tv", item.get("id"))} for item in results[:10]]}
+
+
+@mcp.tool()
+async def get_tv_details(series_id: int, language: str = "en-US") -> dict[str, Any]:
+    """Get TMDB TV series details and aggregate cast credits."""
+    item = await _provider_call(TMDBClient().tv_details(series_id, language))
+    credits = item.get("aggregate_credits") if isinstance(item.get("aggregate_credits"), dict) else {}
+    cast = credits.get("cast") if isinstance(credits.get("cast"), list) else []
+    return {"provider": "TMDB", "id": item.get("id"), "name": item.get("name"),
+            "first_air_date": item.get("first_air_date", ""), "overview": item.get("overview", ""),
+            "number_of_seasons": item.get("number_of_seasons"), "number_of_episodes": item.get("number_of_episodes"),
+            "genres": [g.get("name") for g in item.get("genres", []) if isinstance(g, dict)],
+            "origin_country": item.get("origin_country", []), "original_language": item.get("original_language"),
+            "cast": [{"name": person.get("name"), "roles": [r.get("character") for r in person.get("roles", []) if isinstance(r, dict)]}
+                     for person in cast[:15] if isinstance(person, dict)],
+            "source_url": _tmdb_url("tv", item.get("id"))}
+
+
+@mcp.tool()
+async def discover_movies(language: str = "en-US", region: str | None = None, country: str | None = None, genres: str | None = None,
+                          original_language: str | None = None, year: int | None = None) -> dict[str, Any]:
+    """Discover movies with optional genre, language, region, and year filters."""
+    results = await _provider_call(TMDBClient().discover_movies(
+        language=language, region=region, with_genres=genres,
+        with_origin_country=country, with_original_language=original_language, year=year))
+    return {"provider": "TMDB", "results": [
+        {"id": x.get("id"), "title": x.get("title"), "release_date": x.get("release_date", ""),
+         "overview": x.get("overview", ""), "vote_average": x.get("vote_average"),
+         "original_language": x.get("original_language"), "source_url": _tmdb_url("movie", x.get("id"))}
+        for x in results[:10]]}
+
+
+@mcp.tool()
+async def discover_tv(language: str = "en-US", country: str | None = None, genres: str | None = None,
+                      original_language: str | None = None, year: int | None = None) -> dict[str, Any]:
+    """Discover TV series with optional genre, language, country, and year filters."""
+    results = await _provider_call(TMDBClient().discover_tv(
+        language=language, with_origin_country=country, with_genres=genres,
+        with_original_language=original_language, year=year))
+    return {"provider": "TMDB", "results": [
+        {"id": x.get("id"), "name": x.get("name"), "first_air_date": x.get("first_air_date", ""),
+         "overview": x.get("overview", ""), "vote_average": x.get("vote_average"),
+         "original_language": x.get("original_language"), "origin_country": x.get("origin_country", []),
+         "source_url": _tmdb_url("tv", x.get("id"))} for x in results[:10]]}
+
+
+@mcp.tool()
+async def get_person_combined_credits(person_id: int) -> dict[str, Any]:
+    """List a person's TMDB movie and television acting credits."""
+    credits = await _provider_call(TMDBClient().person_combined_credits(person_id))
+    results = []
+    for item in credits["cast"]:
+        is_tv = item.get("media_type") == "tv"
+        results.append({"media_type": item.get("media_type"), "id": item.get("id"),
+                        "title": item.get("title") or item.get("name"),
+                        "date": item.get("release_date") or item.get("first_air_date", ""),
+                        "character": item.get("character", ""),
+                        "source_url": _tmdb_url("tv" if is_tv else "movie", item.get("id"))})
+    results.sort(key=lambda item: str(item["date"]), reverse=True)
+    return {"provider": "TMDB", "person_id": person_id, "results": results[:30]}
+
+
+@mcp.tool()
+async def get_reference_data(kind: str, query: str = "", language: str = "en-US") -> dict[str, Any]:
+    """Get TMDB language, country, or movie/TV genre codes and labels."""
+    client = TMDBClient()
+    methods = {"languages": client.languages, "countries": client.countries,
+               "movie_genres": lambda: client.movie_genres(language),
+               "tv_genres": lambda: client.tv_genres(language)}
+    if kind not in methods:
+        raise ToolError("kind must be languages, countries, movie_genres, or tv_genres")
+    results = await _provider_call(methods[kind]())
+    if query:
+        needle = query.casefold()
+        results = [item for item in results if needle in " ".join(str(v) for v in item.values()).casefold()]
+    return {"provider": "TMDB", "kind": kind, "results": results[:30]}
+
+
+@mcp.tool()
+async def get_related_titles(media_type: str, identity: int, relation: str, language: str = "en-US") -> dict[str, Any]:
+    """Get TMDB similar or recommended movies/TV based on a selected TMDB title ID."""
+    results = await _provider_call(TMDBClient().related_titles(media_type, identity, relation, language))
+    title_key, date_key = ("title", "release_date") if media_type == "movie" else ("name", "first_air_date")
+    return {"provider": "TMDB", "relation": relation, "media_type": media_type, "results": [
+        {"id": x.get("id"), "title": x.get(title_key), "date": x.get(date_key, ""), "overview": x.get("overview", ""),
+         "vote_average": x.get("vote_average"), "source_url": _tmdb_url(media_type, x.get("id"))} for x in results[:10]]}
+
+
+@mcp.tool()
+async def get_watch_providers(media_type: str, identity: int, country: str) -> dict[str, Any]:
+    """Get movie/TV streaming availability for a country; availability data is provided by JustWatch."""
+    if len(country) != 2 or not country.isalpha():
+        raise ToolError("country must be a two-letter ISO country code")
+    data = await _provider_call(TMDBClient().watch_providers(media_type, identity))
+    regions = data.get("results") if isinstance(data.get("results"), dict) else {}
+    region = regions.get(country.upper())
+    if not isinstance(region, dict):
+        return {"provider": "TMDB", "data_source": "JustWatch", "country": country.upper(), "results": [],
+                "message": "No watch-provider information is listed for this country."}
+    groups = []
+    for category in ("flatrate", "free", "ads", "rent", "buy"):
+        values = region.get(category)
+        if isinstance(values, list):
+            groups.extend({"availability": category, "provider": x.get("provider_name"), "logo_path": x.get("logo_path")}
+                          for x in values if isinstance(x, dict))
+    return {"provider": "TMDB", "data_source": "JustWatch", "country": country.upper(),
+            "tmdb_link": region.get("link"), "results": groups}
+
+
+@mcp.tool()
+async def search_collections(query: str, language: str = "en-US") -> dict[str, Any]:
+    """Search TMDB movie collections/franchises by name."""
+    results = await _provider_call(TMDBClient().search_collections(query, language))
+    return {"provider": "TMDB", "results": [
+        {"id": x.get("id"), "name": x.get("name"), "overview": x.get("overview", ""),
+         "source_url": _tmdb_url("collection", x.get("id"))} for x in results[:10]]}
+
+
+@mcp.tool()
+async def get_collection_details(collection_id: int, language: str = "en-US") -> dict[str, Any]:
+    """Get TMDB collection/franchise details and constituent movies."""
+    item = await _provider_call(TMDBClient().collection_details(collection_id, language))
+    return {"provider": "TMDB", "id": item.get("id"), "name": item.get("name"),
+            "overview": item.get("overview", ""), "source_url": _tmdb_url("collection", item.get("id")),
+            "parts": [{"id": x.get("id"), "title": x.get("title"), "release_date": x.get("release_date", ""),
+                       "source_url": _tmdb_url("movie", x.get("id"))}
+                      for x in item.get("parts", []) if isinstance(x, dict)]}
+
+
+@mcp.tool()
+async def rate_movie(movie_id: int, rating: float, user_requested: bool) -> dict[str, Any]:
+    """Submit a 0.5–10 rating only on explicit user request using a one-use TMDB guest session."""
+    _validate_rating(rating, user_requested)
+    client = TMDBClient()
+    session = await _provider_call(client.create_guest_session())
+    result = await _provider_call(client.rate_movie(movie_id, rating, session))
+    return {"provider": "TMDB", "result": result.get("status_message", "Rating submitted"),
+            "source_url": _tmdb_url("movie", movie_id)}
+
+
+@mcp.tool()
+async def rate_tv(series_id: int, rating: float, user_requested: bool) -> dict[str, Any]:
+    """Submit an explicit user-requested rating for a TV series using a temporary guest session."""
+    _validate_rating(rating, user_requested)
+    client = TMDBClient()
+    session = await _provider_call(client.create_guest_session())
+    result = await _provider_call(client.rate_tv(series_id, rating, session))
+    return {"provider": "TMDB", "result": result.get("status_message", "Rating submitted"),
+            "source_url": _tmdb_url("tv", series_id)}
+
+
+@mcp.tool()
+async def rate_tv_episode(series_id: int, season_number: int, episode_number: int,
+                          rating: float, user_requested: bool) -> dict[str, Any]:
+    """Submit an explicit user-requested TV episode rating using a temporary guest session."""
+    _validate_rating(rating, user_requested)
+    if season_number < 0 or episode_number < 1:
+        raise ToolError("Season must be zero or greater and episode must be one or greater.")
+    client = TMDBClient()
+    session = await _provider_call(client.create_guest_session())
+    result = await _provider_call(client.rate_tv_episode(series_id, season_number, episode_number, rating, session))
+    source = f"https://www.themoviedb.org/tv/{series_id}/season/{season_number}/episode/{episode_number}"
+    return {"provider": "TMDB", "result": result.get("status_message", "Rating submitted"), "source_url": source}
+
+
+def _validate_rating(rating: float, user_requested: bool) -> None:
+    if not user_requested:
+        raise ToolError("A rating can only be submitted at the user's explicit request.")
+    if isinstance(rating, bool) or not 0.5 <= rating <= 10 or round(rating * 2) != rating * 2:
+        raise ToolError("TMDB ratings must be from 0.5 to 10 in half-point increments.")
 
 
 def _tmdb_url(kind: str, identity: object) -> str | None:

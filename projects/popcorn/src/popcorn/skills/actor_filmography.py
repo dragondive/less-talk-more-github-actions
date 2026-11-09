@@ -7,7 +7,7 @@ SKILL_NAME = "actor_filmography"
 ToolInvoker = Callable[[str, dict[str, object]], Awaitable[Any]]
 
 
-async def run(name: str, invoke: ToolInvoker) -> str:
+async def run(name: str, invoke: ToolInvoker, media: str = "all") -> str:
     found = await invoke("search_people", {"query": name})
     candidates = found.get("results", []) if isinstance(found, dict) else []
     if not candidates:
@@ -23,12 +23,19 @@ async def run(name: str, invoke: ToolInvoker) -> str:
         )
         return f"I found several people matching {name!r}. Which one did you mean? {choices}"
 
-    credits = await invoke("get_person_movie_credits", {"person_id": selected["id"]})
-    works = credits.get("results", []) if isinstance(credits, dict) else []
+    if media == "movie":
+        credits = await invoke("get_person_movie_credits", {"person_id": selected["id"]})
+        raw_works = credits.get("results", []) if isinstance(credits, dict) else []
+        works = [{**work, "date": work.get("release_date", ""), "media_type": "movie"} for work in raw_works]
+    else:
+        credits = await invoke("get_person_combined_credits", {"person_id": selected["id"]})
+        works = credits.get("results", []) if isinstance(credits, dict) else []
+        if media == "tv":
+            works = [work for work in works if work.get("media_type") == "tv"]
     if not works:
         return f"TMDB has no movie acting credits listed for {selected.get('name')}."
     titles = "; ".join(
-        f"{work.get('title')} ({str(work.get('release_date', ''))[:4] or 'year unknown'})"
+        f"{work.get('title')} ({str(work.get('date', ''))[:4] or 'year unknown'}, {work.get('media_type', 'title')})"
         for work in works[:15]
         if work.get("title")
     )

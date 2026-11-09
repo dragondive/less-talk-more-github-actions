@@ -112,28 +112,35 @@ Connect the initial entertainment data sources behind replaceable adapters.
 
 ## Phase 3 — Initial skills and orchestration
 
-**Status:** IN PROGRESS — movie and actor skills
+**Status:** IN PROGRESS — TMDB movie and TV capabilities
 
 ### Objectives
 Deliver useful domain-specific discovery with a small, testable skill set.
 
 ### Candidate capabilities
 - [x] Movie discovery, details, and credited cast.
-- [x] Actor movie-credit lookup.
-- [ ] TV discovery.
+- [x] Person movie and TV acting-credit lookup.
+- [x] TV discovery and series details/cast.
+- [x] Movie and TV discovery with language, country, genre, and year filters.
+- [x] TMDB language, country, and genre reference lookup.
+- [x] Explicit guest ratings for movies, TV series, and episodes.
+- [x] TMDB similar/recommended titles and collection/franchise lookup.
+- [x] Country-specific movie/TV watch-provider lookup with JustWatch attribution.
 - [ ] Anime and manga discovery.
 - [ ] Music discovery.
 - [ ] Game discovery.
-- [ ] Character/franchise exploration where source data supports it.
-- [ ] Basic recommendation behaviour where source APIs support it.
+- [x] TMDB movie collection/franchise exploration (cross-domain franchise links remain future work).
+- [x] TMDB similar/recommended movie and TV title lookup.
 
 ### Acceptance criteria
 - [x] Each current skill has a clear contract and focused tests.
-- [x] The agent selects the two current skills for representative requests.
+- [x] The agent exposes bounded model tools for the current TMDB skills.
 - [x] Tool failures, missing credentials, and ambiguous results are handled honestly.
 - [x] Results retain TMDB source references.
 
 Do not create a large number of nominal skills before their boundaries are justified.
+
+TMDB remains a domain API behind Popcorn's own MCP adapter; TMDB does not provide an official MCP server. This phase covers selected text-based discovery/reference workflows and explicit rating actions, not the full TMDB REST surface. Artwork, reviews, account settings/lists, and content change tracking remain out of scope.
 
 ---
 

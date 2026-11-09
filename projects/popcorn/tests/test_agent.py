@@ -9,10 +9,10 @@ from popcorn import deepseek
 
 
 class FakeTMDB:
-    async def search_movies(self, query, year=None):
+    async def search_movies(self, query, year=None, language="en-US"):
         return [{"id": 603, "title": "The Matrix", "release_date": "1999-03-31"}]
 
-    async def movie_details(self, movie_id):
+    async def movie_details(self, movie_id, language="en-US"):
         return {
             "id": movie_id,
             "title": "The Matrix",
@@ -29,6 +29,25 @@ class FakeTMDB:
 
     async def person_movie_credits(self, person_id):
         return [{"id": 603, "title": "The Matrix", "release_date": "1999-03-31", "character": "Neo"}]
+
+    async def person_combined_credits(self, person_id):
+        return {"cast": [{"id": 603, "media_type": "movie", "title": "The Matrix", "release_date": "1999-03-31", "character": "Neo"}], "crew": []}
+
+    async def search_tv(self, query, year=None, language="en-US"):
+        return [{"id": 1399, "name": "Game of Thrones", "first_air_date": "2011-04-17"}]
+
+    async def tv_details(self, series_id, language="en-US"):
+        return {"id": series_id, "name": "Game of Thrones", "first_air_date": "2011-04-17", "overview": "Fantasy drama.",
+                "genres": [{"name": "Drama"}], "aggregate_credits": {"cast": [{"name": "Actor", "roles": [{"character": "Hero"}]}]}}
+
+    async def discover_movies(self, **filters):
+        return [{"id": 10, "title": "Example", "release_date": "2020-01-01", "vote_average": 7.1}]
+
+    async def create_guest_session(self):
+        return "temporary-session"
+
+    async def rate_movie(self, movie_id, rating, guest_session_id):
+        return {"status_message": "Success"}
 
 
 @pytest.fixture(autouse=True)
@@ -55,11 +74,10 @@ def test_actor_skill_uses_tmdb_person_and_credit_tools(monkeypatch):
     monkeypatch.setattr(gemini, "api_key", lambda: "")
     monkeypatch.setattr(deepseek, "api_key", lambda: "")
     response, trace = asyncio.run(answer("What movies has Keanu Reeves acted in?"))
-    assert "The Matrix (1999)" in response
+    assert "The Matrix (1999," in response
     assert "https://www.themoviedb.org/person/6384" in response
     assert [event.attributes.get("tool") for event in trace.events if event.name == "mcp.tool.call"] == [
-        "search_people",
-        "get_person_movie_credits",
+        "search_people", "get_person_combined_credits",
     ]
     assert any(event.attributes.get("skill") == "actor_filmography" for event in trace.events)
 
@@ -68,7 +86,7 @@ def test_unsupported_intent_does_not_call_mcp(monkeypatch):
     monkeypatch.setattr(gemini, "api_key", lambda: "")
     monkeypatch.setattr(deepseek, "api_key", lambda: "")
     response, trace = asyncio.run(answer("Hello there"))
-    assert "Tell me about The Matrix" in response
+    assert "movie or TV details" in response
     assert not any(event.name == "mcp.tool.call" for event in trace.events)
 
 
@@ -151,5 +169,38 @@ def test_gemini_selects_skill_and_records_provider(monkeypatch):
     assert [event.attributes.get("provider") for event in trace.events if event.name == "llm.request"] == ["gemini", "gemini"]
     assert any(event.attributes.get("skill") == "actor_filmography" for event in trace.events)
     assert [event.attributes.get("tool") for event in trace.events if event.name == "mcp.tool.call"] == [
-        "search_people", "get_person_movie_credits"
+        "search_people", "get_person_combined_credits"
     ]
+
+
+def test_gemini_selects_tv_skill_and_runs_tmdb_mcp_flow(monkeypatch):
+    monkeypatch.setattr(llm, "active_provider_name", lambda: "gemini")
+    monkeypatch.setattr(gemini, "model_name", lambda: "gemini-test-model")
+    monkeypatch.setattr(mcp_server, "TMDBClient", FakeTMDB)
+    calls = iter([
+        {"choices": [{"message": {"content": None, "tool_calls": [{"id": "tv1", "function": {"name": "tv_discovery", "arguments": '{"title":"Game of Thrones"}'}}]}}]},
+        {"choices": [{"message": {"content": "Game of Thrones is a fantasy drama series."}}]},
+    ])
+    async def fake_completion(messages, tools, *, model):
+        return next(calls)
+    monkeypatch.setattr(gemini, "chat_completion", fake_completion)
+    response, trace = asyncio.run(answer("Tell me about Game of Thrones the TV series"))
+    assert "fantasy drama" in response
+    assert [event.attributes.get("tool") for event in trace.events if event.name == "mcp.tool.call"] == ["search_tv", "get_tv_details"]
+    assert any(event.attributes.get("skill") == "tv_discovery" for event in trace.events)
+
+
+def test_explicit_rating_runs_title_match_then_guest_rating_mcp_tool(monkeypatch):
+    monkeypatch.setattr(llm, "active_provider_name", lambda: "gemini")
+    monkeypatch.setattr(gemini, "model_name", lambda: "gemini-test-model")
+    monkeypatch.setattr(mcp_server, "TMDBClient", FakeTMDB)
+    calls = iter([
+        {"choices": [{"message": {"content": None, "tool_calls": [{"id": "rate1", "function": {"name": "title_rating", "arguments": '{"media":"movie","title":"The Matrix","rating":8.5}'}}]}}]},
+        {"choices": [{"message": {"content": "I submitted an 8.5/10 rating for The Matrix."}}]},
+    ])
+    async def fake_completion(messages, tools, *, model):
+        return next(calls)
+    monkeypatch.setattr(gemini, "chat_completion", fake_completion)
+    response, trace = asyncio.run(answer("Rate The Matrix 8.5 out of 10"))
+    assert "submitted" in response
+    assert [event.attributes.get("tool") for event in trace.events if event.name == "mcp.tool.call"] == ["search_movies", "rate_movie"]
