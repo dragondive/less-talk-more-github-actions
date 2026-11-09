@@ -73,7 +73,8 @@ Create the smallest runnable agent foundation.
 ### Remaining work
 - [ ] Validate the TMDB integration with a user-provided token.
 - [ ] Improve trace timing, error metadata, and redaction checks.
-- [ ] Decide whether a model adds value after the provider workflows are established.
+- [x] Add an optional LLM provider for natural-language skill selection and response phrasing.
+- [ ] Validate a live DeepSeek request after the user configures its API key.
 
 ---
 
@@ -285,4 +286,4 @@ Do not add these to the initial Popcorn milestone without an explicit decision:
 
 ## Current next action
 
-Create the Render Blueprint service, set its `TMDB_ACCESS_TOKEN`, then add its deploy hook URL as the GitHub Actions secret `RENDER_DEPLOY_HOOK_URL`. Verify the public chat app and live workflows. Popcorn Tasting remains deferred.
+Add `DEEPSEEK_API_KEY` to the Render service environment and redeploy. Verify the live DeepSeek tool-calling flow, then expand provider/skill coverage based on the result. Popcorn Tasting remains deferred.

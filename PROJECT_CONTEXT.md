@@ -38,9 +38,9 @@ The development sequence is deliberately incremental:
 3. Build Popcorn Tasting after Popcorn has useful real behavior, using Popcorn as its first evaluation target.
 4. Keep the evaluator independent and generalize its interface only after the Popcorn integration demonstrates the needed evidence contract.
 
-Do not implement Popcorn Tasting during the initial Popcorn phases. Keep provider calls and orchestration replaceable. The first agent uses a deterministic, provider-independent router; a model-backed agent can be selected later without changing provider tools or skill contracts.
+Do not implement Popcorn Tasting during the initial Popcorn phases. Keep provider calls and orchestration replaceable. The agent uses a lightweight DeepSeek adapter for natural-language skill selection and response phrasing; its fallback remains a deterministic router. The model receives only bounded movie and actor skill tools, while provider operations remain in Popcorn's code.
 
-The current implementation uses TMDB's official v3 API behind Popcorn's MCP tools. The first skills cover movie discovery/details/cast and actor movie credits. TMDB access requires an API Read Access Token supplied through `TMDB_ACCESS_TOKEN`. API results retain source links and are attributed to TMDB. A small Starlette chat app serves the same provider-independent deterministic router; no external model is connected yet.
+The current implementation uses TMDB's official v3 API behind Popcorn's MCP tools. The first skills cover movie discovery/details/cast and actor movie credits. TMDB access requires an API Read Access Token supplied through `TMDB_ACCESS_TOKEN`. API results retain source links and are attributed to TMDB. A small Starlette chat app uses DeepSeek when `DEEPSEEK_API_KEY` is configured, and keeps the deterministic router as a fallback. User questions are sent to DeepSeek in model mode; the app does not persist conversation history.
 
 ## 4. Popcorn: product scope
 
@@ -240,7 +240,7 @@ Revisit only when a concrete demo requirement justifies it.
 - Avoid premature infrastructure and scope expansion.
 - Use one repository with independently organized project directories under `projects/`; keep shared docs and automation at the repository root. This also leaves room for unrelated hobby projects.
 - Begin the real agent slice with TMDB-backed movie and actor discovery using the official API behind a small custom MCP adapter.
-- Keep the first intent router provider-independent; defer a model provider decision until the live data workflows are established.
+- Use DeepSeek Flash through a small replaceable chat-completions adapter for LLM tool selection and response phrasing.
 
 ### Open questions for architecture review
 

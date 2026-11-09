@@ -2,6 +2,7 @@ import asyncio
 
 from popcorn.agent import answer
 from popcorn import mcp_server
+from popcorn import deepseek
 
 
 class FakeTMDB:
@@ -29,6 +30,7 @@ class FakeTMDB:
 
 def test_movie_skill_uses_mcp_tools_and_traces_provider_calls(monkeypatch):
     monkeypatch.setattr(mcp_server, "TMDBClient", FakeTMDB)
+    monkeypatch.setattr(deepseek, "api_key", lambda: "")
     response, trace = asyncio.run(answer("Who is in The Matrix?"))
     assert "Keanu Reeves as Neo" in response
     assert "https://www.themoviedb.org/movie/603" in response
@@ -41,6 +43,7 @@ def test_movie_skill_uses_mcp_tools_and_traces_provider_calls(monkeypatch):
 
 def test_actor_skill_uses_tmdb_person_and_credit_tools(monkeypatch):
     monkeypatch.setattr(mcp_server, "TMDBClient", FakeTMDB)
+    monkeypatch.setattr(deepseek, "api_key", lambda: "")
     response, trace = asyncio.run(answer("What movies has Keanu Reeves acted in?"))
     assert "The Matrix (1999)" in response
     assert "https://www.themoviedb.org/person/6384" in response
@@ -51,7 +54,63 @@ def test_actor_skill_uses_tmdb_person_and_credit_tools(monkeypatch):
     assert any(event.attributes.get("skill") == "actor_filmography" for event in trace.events)
 
 
-def test_unsupported_intent_does_not_call_mcp():
+def test_unsupported_intent_does_not_call_mcp(monkeypatch):
+    monkeypatch.setattr(deepseek, "api_key", lambda: "")
     response, trace = asyncio.run(answer("Hello there"))
     assert "Tell me about The Matrix" in response
     assert not any(event.name == "mcp.tool.call" for event in trace.events)
+
+
+def test_deepseek_selects_skill_and_returns_final_response(monkeypatch):
+    monkeypatch.setattr(deepseek, "api_key", lambda: "test-secret")
+    monkeypatch.setattr(deepseek, "model_name", lambda: "deepseek-flash")
+    monkeypatch.setattr(mcp_server, "TMDBClient", FakeTMDB)
+    calls = iter(
+        [
+            {
+                "choices": [
+                    {
+                        "message": {
+                            "content": None,
+                            "tool_calls": [
+                                {
+                                    "id": "call_1",
+                                    "function": {
+                                        "name": "movie_discovery",
+                                        "arguments": '{"title":"The Matrix"}',
+                                    },
+                                }
+                            ],
+                        }
+                    }
+                ],
+                "usage": {"prompt_tokens": 20, "completion_tokens": 8},
+            },
+            {
+                "choices": [
+                    {"message": {"content": "The Matrix stars Keanu Reeves as Neo."}}
+                ]
+            },
+        ]
+    )
+
+    async def fake_completion(messages, tools, *, model):
+        assert model == "deepseek-flash"
+        assert tools
+        return next(calls)
+
+    monkeypatch.setattr(deepseek, "chat_completion", fake_completion)
+    response, trace = asyncio.run(answer("Who is in The Matrix?"))
+
+    assert response == "The Matrix stars Keanu Reeves as Neo."
+    assert [event.name for event in trace.events].count("llm.request") == 2
+    assert any(event.attributes.get("skill") == "movie_discovery" for event in trace.events)
+    assert [event.attributes.get("tool") for event in trace.events if event.name == "mcp.tool.call"] == [
+        "search_movies",
+        "get_movie_details",
+    ]
+    assert any(
+        event.attributes.get("input_tokens") == 20
+        for event in trace.events
+        if event.name == "llm.request"
+    )
