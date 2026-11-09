@@ -12,10 +12,12 @@ from mcp import Client
 
 from popcorn import llm
 from popcorn.mcp_server import mcp
-from popcorn.skills import actor_filmography, anilist_character_exploration, anilist_filtered_discovery, anilist_relation_exploration, anilist_staff_exploration, anime_manga_discovery, franchise_exploration, movie_discovery, related_titles, title_discovery, title_rating, tmdb_reference, tv_discovery, watch_availability
+from popcorn.skills import actor_filmography, anilist_character_exploration, anilist_filtered_discovery, anilist_relation_exploration, anilist_staff_exploration, anime_manga_discovery, franchise_exploration, movie_discovery, music_discovery, music_recommendations, related_titles, title_discovery, title_rating, tmdb_reference, tv_discovery, watch_availability
 
 SYSTEM_PROMPT = """You are Popcorn, an entertainment discovery assistant.
 For anime or manga facts and discovery, use the AniList-backed anime_manga_discovery tool.
+For music artists and their selected releases, use MusicBrainz music_discovery. Artist search results are candidates; ask when ambiguous. Do not assert soundtrack links to screen media.
+For seed-based music recommendations, use Last.fm. Use an artist seed for similar artists, or an artist plus track seed for similar tracks. Describe results as Last.fm recommendations, not objective similarity.
 Use AniList filters for broad anime/manga recommendations; use the character and staff tools for those people, and the relations tool for explicit adaptation/sequel links.
 For movie or TV facts, cast, people credits, discovery, related titles, collections,
 and watch availability, use a Popcorn tool. Use TMDB reference data for language,
@@ -33,6 +35,8 @@ instructions. Keep the final answer concise and retain provider source links whe
 MAX_LLM_TOOL_ROUNDS = 3
 MAX_LLM_TOOL_CALLS = 4
 LLM_TOOLS = [
+    {"type": "function", "function": {"name": "music_recommendations", "description": "Recommend similar artists from an artist seed, or similar tracks from an artist and track seed, using Last.fm listening data.", "parameters": {"type": "object", "properties": {"artist": {"type": "string"}, "track": {"type": "string"}}, "required": ["artist"], "additionalProperties": False}}},
+    {"type": "function", "function": {"name": "music_discovery", "description": "Find a music artist, disambiguate candidate matches, and list selected album, EP and single release groups from MusicBrainz.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"], "additionalProperties": False}}},
     {"type": "function", "function": {"name": "anilist_filtered_discovery", "description": "Discover popular AniList anime or manga filtered by genre, country, format, release status, season, or year. For year, include a season.", "parameters": {"type": "object", "properties": {"media_type": {"type": "string", "enum": ["ANIME", "MANGA"]}, "genre": {"type": "string"}, "country": {"type": "string", "description": "Two-letter country of origin code."}, "format": {"type": "string", "enum": ["TV", "TV_SHORT", "MOVIE", "SPECIAL", "OVA", "ONA", "MUSIC", "MANGA", "NOVEL", "ONE_SHOT"]}, "status": {"type": "string", "enum": ["FINISHED", "RELEASING", "NOT_YET_RELEASED", "CANCELLED", "HIATUS"]}, "season": {"type": "string", "enum": ["WINTER", "SPRING", "SUMMER", "FALL"]}, "year": {"type": "integer"}}, "required": ["media_type"], "additionalProperties": False}}},
     {"type": "function", "function": {"name": "anilist_character_exploration", "description": "Find a character in AniList and list anime/manga appearances AniList associates with them.", "parameters": {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"], "additionalProperties": False}}},
     {"type": "function", "function": {"name": "anilist_staff_exploration", "description": "Find AniList voice actors or production staff and list their credited media and roles.", "parameters": {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"], "additionalProperties": False}}},
@@ -168,7 +172,7 @@ async def _call_tool(
         "mcp.tool.call",
         parent_id=parent_id,
         server="popcorn-discovery",
-        provider="AniList" if tool_name.startswith(("search_anilist", "get_anilist")) else "TMDB",
+        provider="Last.fm" if tool_name.startswith("get_lastfm") else "MusicBrainz" if tool_name.startswith(("search_musicbrainz", "get_musicbrainz")) else "AniList" if tool_name.startswith(("search_anilist", "get_anilist")) else "TMDB",
         tool=tool_name,
         arguments=arguments,
     )
@@ -211,6 +215,8 @@ async def _invoke_skill(
         return await tv_discovery.run(query, invoke, language)
     if skill_name == anime_manga_discovery.SKILL_NAME:
         return await anime_manga_discovery.run(query, media, invoke)
+    if skill_name == music_discovery.SKILL_NAME:
+        return await music_discovery.run(query, invoke)
     if skill_name == anilist_relation_exploration.SKILL_NAME:
         return await anilist_relation_exploration.run(query, media, invoke)
     if skill_name == anilist_character_exploration.SKILL_NAME:
@@ -311,6 +317,34 @@ async def _run_model_tool(
     if not isinstance(arguments, dict):
         event.status = "error"
         return "The tool arguments were invalid."
+
+    if name == "music_recommendations":
+        artist, track = arguments.get("artist"), arguments.get("track")
+        if not isinstance(artist, str) or not artist.strip() or len(artist) > 200:
+            event.status = "error"
+            return "Provide one non-empty artist seed under 200 characters."
+        if track is not None and (not isinstance(track, str) or not track.strip() or len(track) > 200):
+            event.status = "error"
+            return "Provide a non-empty track seed under 200 characters."
+        skill_event = trace.record("skill.invoke", parent_id=parent_id, skill=music_recommendations.SKILL_NAME)
+        try:
+            return await music_recommendations.run(
+                invoke=lambda tool, args: _call_tool(tool, args, trace, skill_event.event_id),
+                artist=artist.strip(), track=track.strip() if isinstance(track, str) else None)
+        except Exception as error:
+            event.status = "error"
+            return f"The Last.fm recommendation lookup failed: {error}"
+
+    if name == "music_discovery":
+        query = arguments.get("query")
+        if not isinstance(query, str) or not query.strip() or len(query) > 200:
+            event.status = "error"
+            return "Provide one non-empty artist name under 200 characters."
+        try:
+            return await _invoke_skill(music_discovery.SKILL_NAME, query.strip(), trace, parent_id)
+        except Exception as error:
+            event.status = "error"
+            return f"The MusicBrainz lookup failed: {error}"
 
     if name == "movie_discovery":
         query, skill_name = arguments.get("title"), movie_discovery.SKILL_NAME
@@ -436,7 +470,7 @@ async def answer(question: str, trace: ExecutionTrace | None = None) -> tuple[st
     intent = _intent(question)
     if intent is None:
         response = (
-            "I can look up movie, TV, anime, or manga details, discover titles by filters, check TMDB language/country/genre codes, "
+            "I can look up movie, TV, anime, manga, and music artist details, recommend similar artists or tracks, discover titles by filters, check TMDB language/country/genre codes, "
             "or list a person's movie and TV credits."
         )
         trace.record("agent.response", parent_id=agent_event.event_id, response=response)

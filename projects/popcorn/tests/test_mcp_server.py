@@ -39,6 +39,10 @@ def test_mcp_server_exposes_tmdb_discovery_tools():
         "get_anilist_character_details",
         "search_anilist_staff",
         "get_anilist_staff_details",
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups",
+        "get_lastfm_recommendations",
     }
 
 

@@ -109,7 +109,7 @@ def test_unsupported_intent_does_not_call_mcp(monkeypatch):
     monkeypatch.setattr(gemini, "api_key", lambda: "")
     monkeypatch.setattr(deepseek, "api_key", lambda: "")
     response, trace = asyncio.run(answer("Hello there"))
-    assert "movie, TV, anime, or manga details" in response
+    assert "movie, TV, anime, manga, and music artist details" in response
     assert not any(event.name == "mcp.tool.call" for event in trace.events)
 
 
@@ -211,6 +211,60 @@ def test_gemini_selects_tv_skill_and_runs_tmdb_mcp_flow(monkeypatch):
     assert "fantasy drama" in response
     assert [event.attributes.get("tool") for event in trace.events if event.name == "mcp.tool.call"] == ["search_tv", "get_tv_details"]
     assert any(event.attributes.get("skill") == "tv_discovery" for event in trace.events)
+
+
+def test_gemini_selects_music_skill_through_musicbrainz_mcp(monkeypatch):
+    class FakeMusicBrainz:
+        async def search_artists(self, query):
+            return [{"id": "12345678-1234-1234-1234-123456789abc", "name": "Yoko Kanno", "type": "Person", "area": {"name": "Japan"}}]
+        async def artist_details(self, mbid):
+            return {"id": mbid, "name": "Yoko Kanno", "type": "Person", "area": {"name": "Japan"}, "aliases": []}
+        async def artist_release_groups(self, mbid):
+            return [{"id": "def", "title": "Cowboy Bebop", "primary-type": "Album", "first-release-date": "1998"}]
+
+    monkeypatch.setattr(llm, "active_provider_name", lambda: "gemini")
+    monkeypatch.setattr(gemini, "model_name", lambda: "gemini-test-model")
+    monkeypatch.setattr(mcp_server, "_musicbrainz", FakeMusicBrainz())
+    calls = iter([
+        {"choices": [{"message": {"content": None, "tool_calls": [{"id": "music1", "function": {"name": "music_discovery", "arguments": '{"query":"Yoko Kanno"}'}}]}}]},
+        {"choices": [{"message": {"content": "Yoko Kanno released the Cowboy Bebop soundtrack album."}}]},
+    ])
+    async def fake_completion(messages, tools, *, model):
+        assert any(tool["function"]["name"] == "music_discovery" for tool in tools)
+        return next(calls)
+    monkeypatch.setattr(gemini, "chat_completion", fake_completion)
+    response, trace = asyncio.run(answer("What has Yoko Kanno released?"))
+    assert "Cowboy Bebop" in response
+    assert [e.attributes.get("provider") for e in trace.events if e.name == "mcp.tool.call"] == ["MusicBrainz"] * 3
+    assert [e.attributes.get("tool") for e in trace.events if e.name == "mcp.tool.call"] == [
+        "search_musicbrainz_artists", "get_musicbrainz_artist", "get_musicbrainz_artist_release_groups"]
+
+
+def test_gemini_selects_lastfm_music_recommendations(monkeypatch):
+    class FakeLastFM:
+        async def similar_artists(self, artist, limit):
+            return [{"name": "Broadcast", "match": "0.7", "url": "https://www.last.fm/music/Broadcast"}]
+
+        async def similar_tracks(self, artist, track, limit):
+            return [{"name": "Ray of Light", "artist": {"name": "Madonna"}, "match": "0.5", "url": "https://www.last.fm/music/Madonna/_/Ray+of+Light"}]
+
+    monkeypatch.setattr(llm, "active_provider_name", lambda: "gemini")
+    monkeypatch.setattr(gemini, "model_name", lambda: "gemini-test-model")
+    monkeypatch.setattr(mcp_server, "LastFMClient", lambda: FakeLastFM())
+    calls = iter([
+        {"choices": [{"message": {"content": None, "tool_calls": [{"id": "rec1", "function": {"name": "music_recommendations", "arguments": '{"artist":"Portishead"}'}}]}}]},
+        {"choices": [{"message": {"content": "Try Broadcast, which Last.fm suggests as similar to Portishead."}}]},
+    ])
+
+    async def fake_completion(messages, tools, *, model):
+        assert any(tool["function"]["name"] == "music_recommendations" for tool in tools)
+        return next(calls)
+
+    monkeypatch.setattr(gemini, "chat_completion", fake_completion)
+    response, trace = asyncio.run(answer("Recommend artists like Portishead"))
+    assert "Broadcast" in response
+    assert [e.attributes.get("provider") for e in trace.events if e.name == "mcp.tool.call"] == ["Last.fm"]
+    assert [e.attributes.get("tool") for e in trace.events if e.name == "mcp.tool.call"] == ["get_lastfm_recommendations"]
 
 
 def test_gemini_selects_anime_skill_through_anilist_mcp(monkeypatch):

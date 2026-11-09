@@ -10,8 +10,11 @@ from mcp.server.mcpserver.exceptions import ToolError
 
 from popcorn.tmdb import TMDBClient, TMDBError
 from popcorn.anilist import AniListClient, AniListError
+from popcorn.musicbrainz import MusicBrainzClient, MusicBrainzError
+from popcorn.lastfm import LastFMClient, LastFMError
 
 mcp = MCPServer("popcorn-discovery")
+_musicbrainz = MusicBrainzClient()
 T = TypeVar("T")
 
 
@@ -27,6 +30,85 @@ async def _anilist_call(awaitable: Awaitable[T]) -> T:
         return await awaitable
     except AniListError as error:
         raise ToolError(str(error)) from None
+
+
+async def _musicbrainz_call(awaitable: Awaitable[T]) -> T:
+    try:
+        return await awaitable
+    except MusicBrainzError as error:
+        raise ToolError(str(error)) from None
+
+
+async def _lastfm_call(awaitable: Awaitable[T]) -> T:
+    try:
+        return await awaitable
+    except LastFMError as error:
+        raise ToolError(str(error)) from None
+
+
+@mcp.tool()
+async def get_lastfm_recommendations(artist: str, track: str | None = None) -> dict[str, Any]:
+    """Recommend similar Last.fm artists, or tracks when both artist and track are supplied."""
+    _validate_lastfm_query(artist, "artist")
+    if track is not None:
+        _validate_lastfm_query(track, "track")
+        results = await _lastfm_call(LastFMClient().similar_tracks(artist, track, 8))
+        return {"provider": "Last.fm", "seed": {"artist": artist, "track": track}, "kind": "tracks", "results": [
+            {"name": x.get("name"), "artist": (x.get("artist") or {}).get("name"), "match": x.get("match"),
+             "source_url": x.get("url")} for x in results[:8]]}
+    results = await _lastfm_call(LastFMClient().similar_artists(artist, 8))
+    return {"provider": "Last.fm", "seed": {"artist": artist}, "kind": "artists", "results": [
+        {"name": x.get("name"), "mbid": x.get("mbid") or None, "match": x.get("match"),
+         "source_url": x.get("url")} for x in results[:8]]}
+
+
+def _validate_lastfm_query(value: str, label: str) -> None:
+    if not value.strip() or len(value) > 200:
+        raise ToolError(f"{label} must be non-empty and under 200 characters")
+
+
+@mcp.tool()
+async def search_musicbrainz_artists(query: str) -> dict[str, Any]:
+    """Search MusicBrainz artist candidates; names may be ambiguous."""
+    _validate_musicbrainz_query(query)
+    results = await _musicbrainz_call(_musicbrainz.search_artists(query))
+    return {"provider": "MusicBrainz", "results": [
+        {"id": x.get("id"), "name": x.get("name"), "type": x.get("type"),
+         "area": (x.get("area") or {}).get("name"), "begin": x.get("life-span", {}).get("begin"),
+         "disambiguation": x.get("disambiguation"), "source_url": f"https://musicbrainz.org/artist/{x.get('id')}"}
+        for x in results[:8]]}
+
+
+@mcp.tool()
+async def get_musicbrainz_artist(mbid: str) -> dict[str, Any]:
+    """Retrieve MusicBrainz artist details by MBID."""
+    _validate_mbid(mbid)
+    x = await _musicbrainz_call(_musicbrainz.artist_details(mbid))
+    return {"provider": "MusicBrainz", "id": x.get("id"), "name": x.get("name"), "type": x.get("type"),
+            "area": (x.get("area") or {}).get("name"), "disambiguation": x.get("disambiguation"),
+            "aliases": x.get("aliases", []), "source_url": f"https://musicbrainz.org/artist/{x.get('id')}"}
+
+
+@mcp.tool()
+async def get_musicbrainz_artist_release_groups(mbid: str) -> dict[str, Any]:
+    """Browse up to ten album, EP and single release groups for a MusicBrainz artist."""
+    _validate_mbid(mbid)
+    results = await _musicbrainz_call(_musicbrainz.artist_release_groups(mbid))
+    return {"provider": "MusicBrainz", "artist_id": mbid, "results": [
+        {"id": x.get("id"), "title": x.get("title"), "type": x.get("primary-type"),
+         "first-release-date": x.get("first-release-date"),
+         "source_url": f"https://musicbrainz.org/release-group/{x.get('id')}"} for x in results[:10]]}
+
+
+def _validate_musicbrainz_query(query: str) -> None:
+    if not query.strip() or len(query) > 200:
+        raise ToolError("query must be non-empty and under 200 characters")
+
+
+def _validate_mbid(mbid: str) -> None:
+    import re
+    if not re.fullmatch(r"[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}", mbid):
+        raise ToolError("Provide a valid MusicBrainz MBID")
 
 
 @mcp.tool()

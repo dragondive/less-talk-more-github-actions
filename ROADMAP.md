@@ -89,7 +89,7 @@ Connect the initial entertainment data sources behind replaceable adapters.
 ### Providers
 - [ ] TMDB — movies and TV.
 - [ ] AniList — anime and manga (read-only adapter and skill implemented; live check pending).
-- [ ] MusicBrainz — music.
+- [x] MusicBrainz — focused read-only artist and release-group adapter implemented; live check pending.
 - [ ] IGDB — video games.
 
 ### Tasks
@@ -100,6 +100,9 @@ Connect the initial entertainment data sources behind replaceable adapters.
 - [x] Add timeouts, error handling and rate-limit messaging.
 - [x] Add mocked tests for success, malformed responses, and authentication failures.
 - [x] Add read-only AniList GraphQL adapter and MCP tools for title search/details, filtered discovery, character search/details, and staff search/details with mocked tests.
+- [x] Add read-only MusicBrainz artist search/details and bounded release-group browsing with a versioned User-Agent and one-request-per-second per-process spacing.
+- [x] Add read-only Last.fm similar-artist and similar-track recommendations from explicit seeds; API key required, user login not required.
+- [ ] Run an optional live connectivity check for MusicBrainz.
 - [ ] Run an optional live connectivity check for AniList; public reads do not require credentials.
 - [ ] Add additional mocked cases for empty search results and transient provider failures.
 - [ ] Run an optional live connectivity check when TMDB access is configured.
@@ -133,7 +136,8 @@ Deliver useful domain-specific discovery with a small, testable skill set.
 - [x] Character search and AniList-listed appearance exploration.
 - [x] Staff search with production and voice-credit exploration.
 - [x] Explicit AniList relation exploration for adaptations, sequels, and related works.
-- [ ] Music discovery.
+- [x] MusicBrainz artist and selected album/EP/single release discovery (screen-media soundtrack links remain unsupported).
+- [x] Last.fm seed-based recommendations for similar artists and tracks.
 - [ ] Game discovery.
 - [x] TMDB movie collection/franchise exploration (cross-domain franchise links remain future work).
 - [x] TMDB similar/recommended movie and TV title lookup.
