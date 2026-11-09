@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
@@ -15,8 +16,13 @@ class GeminiError(RuntimeError):
     """Safe, user-facing Gemini API error."""
 
 
+class GeminiUnavailableError(GeminiError):
+    """Retryable Gemini service overload response."""
+
+
 DEFAULT_MODEL = "gemini-3.8-flash"
 API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+RETRY_DELAYS_SECONDS = (1, 2)
 
 
 def api_key() -> str:
@@ -129,6 +135,8 @@ def _post_json(
         else:
             result = get_bytes(url, body, headers, timeout)
     except HTTPError as error:
+        if error.code == 503:
+            raise GeminiUnavailableError("Gemini is temporarily unavailable (HTTP 503).") from None
         if error.code in (401, 403):
             raise GeminiError(f"Gemini rejected the API key or access (HTTP {error.code}). Check GEMINI_API_KEY and model access.") from None
         if error.code == 429:
@@ -166,7 +174,25 @@ async def chat_completion(
     }
     if system_instruction:
         payload["systemInstruction"] = system_instruction
-    data = _post_json(selected_model, payload, key if key is not None else api_key(), timeout=timeout, get_bytes=get_bytes)
+    data = None
+    for delay in (*RETRY_DELAYS_SECONDS, None):
+        try:
+            data = _post_json(
+                selected_model,
+                payload,
+                key if key is not None else api_key(),
+                timeout=timeout,
+                get_bytes=get_bytes,
+            )
+            break
+        except GeminiUnavailableError:
+            if delay is None:
+                raise GeminiError(
+                    "Gemini is temporarily unavailable (HTTP 503) after retrying. Try again shortly."
+                ) from None
+            await asyncio.sleep(delay)
+    if data is None:
+        raise GeminiError("Gemini returned no response.")
     candidates = data.get("candidates")
     if not isinstance(candidates, list) or not candidates or not isinstance(candidates[0], dict):
         raise GeminiError("Gemini returned no candidate response.")

@@ -4,6 +4,7 @@ from urllib.error import HTTPError
 
 import pytest
 
+from popcorn import gemini
 from popcorn.gemini import API_URL, GeminiError, chat_completion
 
 
@@ -80,3 +81,42 @@ def test_gemini_sanitizes_authentication_error():
     with pytest.raises(GeminiError, match="rejected the API key") as error:
         asyncio.run(chat_completion([], [], key="test-secret", get_bytes=unauthorized))
     assert "test-secret" not in str(error.value)
+
+
+def test_gemini_retries_service_unavailable_then_succeeds(monkeypatch):
+    requests = 0
+    delays = []
+
+    def post(_url, _body, _headers, _timeout):
+        nonlocal requests
+        requests += 1
+        if requests < 3:
+            raise HTTPError("https://example.invalid", 503, "unavailable", {}, None)
+        return b'{"candidates":[{"content":{"parts":[{"text":"Recovered."}]}}]}'
+
+    async def no_wait(delay):
+        delays.append(delay)
+
+    monkeypatch.setattr(gemini.asyncio, "sleep", no_wait)
+    response = asyncio.run(chat_completion([], [], key="test-secret", get_bytes=post))
+
+    assert response["choices"][0]["message"]["content"] == "Recovered."
+    assert requests == 3
+    assert delays == [1, 2]
+
+
+def test_gemini_reports_service_unavailable_after_bounded_retries(monkeypatch):
+    requests = 0
+
+    def unavailable(_url, _body, _headers, _timeout):
+        nonlocal requests
+        requests += 1
+        raise HTTPError("https://example.invalid", 503, "unavailable", {}, None)
+
+    async def no_wait(_delay):
+        return None
+
+    monkeypatch.setattr(gemini.asyncio, "sleep", no_wait)
+    with pytest.raises(GeminiError, match="after retrying"):
+        asyncio.run(chat_completion([], [], key="test-secret", get_bytes=unavailable))
+    assert requests == 3

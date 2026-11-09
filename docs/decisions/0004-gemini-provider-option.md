@@ -18,4 +18,5 @@ The model can select only movie discovery and actor filmography. Popcorn continu
 - User prompts and bounded TMDB tool results are sent to whichever model is selected. Popcorn does not persist conversation history.
 - The provider's account, quota, model availability, and pricing rules apply. Check Google AI Studio account access before relying on a particular free or paid quota.
 - Provider traces identify the selected provider and model, with token usage when supplied by the API.
+- Gemini HTTP 503 responses receive two short retries with exponential backoff before a safe error is returned.
 - The agent and skill contracts remain independent of either model provider.

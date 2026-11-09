@@ -1,4 +1,5 @@
 import asyncio
+import pytest
 
 from popcorn.agent import answer
 from popcorn import gemini
@@ -28,6 +29,11 @@ class FakeTMDB:
 
     async def person_movie_credits(self, person_id):
         return [{"id": 603, "title": "The Matrix", "release_date": "1999-03-31", "character": "Neo"}]
+
+
+@pytest.fixture(autouse=True)
+def settings_use_test_defaults(monkeypatch):
+    monkeypatch.setattr(llm, "configured_value", lambda _name: "")
 
 
 def test_movie_skill_uses_mcp_tools_and_traces_provider_calls(monkeypatch):
