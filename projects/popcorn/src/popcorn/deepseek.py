@@ -3,46 +3,27 @@
 from __future__ import annotations
 
 import json
-import os
-from pathlib import Path
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+from popcorn.config import configured_value
 
 
 class DeepSeekError(RuntimeError):
     """Safe, user-facing DeepSeek API error."""
 
 
-ENV_FILE = Path(__file__).resolve().parents[4] / ".env"
 API_URL = "https://api.deepseek.com/chat/completions"
 DEFAULT_MODEL = "deepseek-flash"
 
 
-def _configured_value(name: str) -> str:
-    value = os.getenv(name, "").strip()
-    if value:
-        return value
-    try:
-        lines = ENV_FILE.read_text(encoding="utf-8").splitlines()
-    except OSError:
-        return ""
-    for line in lines:
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        key, separator, value = line.partition("=")
-        if separator and key.strip() == name:
-            return value.strip().strip("\"'")
-    return ""
-
-
 def api_key() -> str:
-    return _configured_value("DEEPSEEK_API_KEY")
+    return configured_value("DEEPSEEK_API_KEY")
 
 
 def model_name() -> str:
-    return _configured_value("DEEPSEEK_MODEL") or DEFAULT_MODEL
+    return configured_value("DEEPSEEK_MODEL") or DEFAULT_MODEL
 
 
 def _post_json(

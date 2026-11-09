@@ -74,7 +74,8 @@ Create the smallest runnable agent foundation.
 - [ ] Validate the TMDB integration with a user-provided token.
 - [ ] Improve trace timing, error metadata, and redaction checks.
 - [x] Add an optional LLM provider for natural-language skill selection and response phrasing.
-- [ ] Validate a live DeepSeek request after the user configures its API key.
+- [x] Add Gemini as a selectable LLM provider while retaining DeepSeek.
+- [ ] Configure a Gemini API key on Render and validate live model-to-skill-to-MCP flow.
 
 ---
 
@@ -286,4 +287,4 @@ Do not add these to the initial Popcorn milestone without an explicit decision:
 
 ## Current next action
 
-Add `DEEPSEEK_API_KEY` to the Render service environment and redeploy. Verify the live DeepSeek tool-calling flow, then expand provider/skill coverage based on the result. Popcorn Tasting remains deferred.
+Add `GEMINI_API_KEY` to the Render service environment, set `LLM_PROVIDER=gemini`, and redeploy. Verify the live Gemini tool-calling flow, then expand provider/skill coverage based on the result. DeepSeek remains selectable with `LLM_PROVIDER=deepseek`. Popcorn Tasting remains deferred.

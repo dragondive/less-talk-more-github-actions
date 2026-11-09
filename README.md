@@ -4,14 +4,19 @@ Popcorn is an entertainment discovery agent. This first real-data slice connects
 
 ## Configure TMDB
 
-Create a TMDB account and request API access from the account's API settings, and create a DeepSeek API key. Create a local `.env` file (ignored by Git) containing:
+Create a TMDB account and request API access from the account's API settings. To use model-backed routing, create a Gemini API key (or use the retained DeepSeek option). Create a local `.env` file (ignored by Git) containing:
 
 ```bash
 TMDB_ACCESS_TOKEN=your_api_read_access_token_here
+GEMINI_API_KEY=your_gemini_api_key_here
+LLM_PROVIDER=gemini
+# Optional: retain/use DeepSeek by setting LLM_PROVIDER=deepseek
 DEEPSEEK_API_KEY=your_deepseek_api_key_here
 ```
 
-You can also set `TMDB_ACCESS_TOKEN` and `DEEPSEEK_API_KEY` in the process environment. Do not commit credentials or put them in a trace.
+You can also set these values in the process environment. Set `LLM_PROVIDER` to `gemini` or `deepseek` to select explicitly. If it is omitted, Popcorn uses Gemini when `GEMINI_API_KEY` is configured, then DeepSeek when `DEEPSEEK_API_KEY` is configured; without either key it uses the deterministic router. Do not commit credentials or put them in a trace.
+
+Create a Gemini key in [Google AI Studio](https://aistudio.google.com/apikey) and keep it server-side as `GEMINI_API_KEY`.
 
 The API supports this token as a Bearer authorization header. See [TMDB application authentication](https://developer.themoviedb.org/docs/authentication-application).
 
@@ -36,7 +41,7 @@ python3 -m pytest projects/popcorn/tests
 uvicorn popcorn.web:app --host 127.0.0.1 --port 8000
 ```
 
-Open `http://127.0.0.1:8000`. When `DEEPSEEK_API_KEY` is configured, DeepSeek selects between the movie and actor skills, which run through Popcorn's TMDB MCP tools. Without a DeepSeek key, the CLI and chat app retain the small deterministic router. The chat app exposes structured execution traces from `/api/chat` and does not retain conversation history. When enabled, the user's message is sent to DeepSeek.
+Open `http://127.0.0.1:8000`. The configured Gemini or DeepSeek model selects between the movie and actor skills, which run through Popcorn's TMDB MCP tools. Without a model key, the CLI and chat app retain the small deterministic router. The chat app exposes structured execution traces from `/api/chat` and does not retain conversation history. When enabled, the user's message is sent to the selected model provider.
 
 Popcorn uses a small deterministic intent router at this stage. Supported requests are movie details/cast lookup and a person's movie acting credits. It searches first and shows candidate choices when a name or title is ambiguous. The agent uses the official TMDB API through a replaceable adapter exposed as MCP tools; normal tests use mocked provider responses and need no credential or network.
 
@@ -55,7 +60,7 @@ This product uses the TMDB API but is not endorsed or certified by TMDB. Movie a
 
 ## Deploy to Render
 
-The repository includes a Render Blueprint at `render.yaml`. In Render, create a Blueprint from this GitHub repository and provide `TMDB_ACCESS_TOKEN` and `DEEPSEEK_API_KEY` when prompted. If the service already exists, add `DEEPSEEK_API_KEY` in its Environment settings and redeploy. The Blueprint creates a free Python web service and disables automatic deploys so deployment happens only after GitHub Actions passes Popcorn tests.
+The repository includes a Render Blueprint at `render.yaml`. In Render, create a Blueprint from this GitHub repository and provide `TMDB_ACCESS_TOKEN` and `GEMINI_API_KEY` when prompted. The Blueprint selects Gemini with `LLM_PROVIDER=gemini`; add `DEEPSEEK_API_KEY` too if you want to keep it configured as an alternate, then set `LLM_PROVIDER=deepseek` to use it. For an existing service, add or update these values in its Environment settings and redeploy. The Blueprint creates a free Python web service and disables automatic deploys so deployment happens only after GitHub Actions passes Popcorn tests.
 
 Copy the service's Deploy Hook URL from Render's Settings and add it to the GitHub repository as an Actions secret named `RENDER_DEPLOY_HOOK_URL`. The workflow skips deployment until this secret exists. Render's deploy hook is a secret; do not put its URL in source or chat. See [Render's deploy hook guide](https://render.com/docs/deploy-hooks).
 
@@ -72,8 +77,8 @@ docs/               # decisions and project guidance
 
 ## Current limits
 
-- DeepSeek is used when `DEEPSEEK_API_KEY` is set; the deterministic router remains as a local fallback. Conversation history is not retained, so each turn is independent.
-- User questions are sent to DeepSeek when the model is enabled. The app does not persist chat history.
+- Gemini or DeepSeek is selected through `LLM_PROVIDER`; without an explicit choice, a configured Gemini key takes precedence over a DeepSeek key. The deterministic router remains as a fallback when neither key is configured. Conversation history is not retained, so each turn is independent.
+- User questions are sent to the selected model when enabled. The app does not persist chat history.
 - TMDB only provides movies and people for this slice. TV, anime/manga, music, games, cross-media links, images, and recommendations are not implemented.
 - Movie/person matching uses simple exact-name preference and otherwise asks the user to disambiguate. It does not infer identity from similar names.
 - TMDB data can be incomplete. Actor credits are described as the credits TMDB lists, not a complete filmography.

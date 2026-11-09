@@ -1,4 +1,4 @@
-"""Popcorn agent: DeepSeek selects bounded skills that invoke TMDB MCP tools."""
+"""Popcorn agent: a configurable LLM selects bounded skills that invoke TMDB MCP tools."""
 
 from __future__ import annotations
 
@@ -10,8 +10,7 @@ from uuid import uuid4
 
 from mcp import Client
 
-from popcorn import deepseek
-from popcorn.deepseek import DeepSeekError
+from popcorn import llm
 from popcorn.mcp_server import mcp
 from popcorn.skills import actor_filmography, movie_discovery
 
@@ -182,15 +181,17 @@ async def _invoke_skill(
     return await actor_filmography.run(query, invoke)
 
 
-async def _request_deepseek(
+async def _request_llm(
+    provider: str,
     messages: list[dict[str, object]], trace: ExecutionTrace, parent_id: str
 ) -> dict[str, object]:
-    model = deepseek.model_name()
+    module = llm.provider_module(provider)
+    model = module.model_name()
     event = trace.record(
-        "llm.request", parent_id=parent_id, provider="deepseek", model=model
+        "llm.request", parent_id=parent_id, provider=provider, model=model
     )
     try:
-        result = await deepseek.chat_completion(messages, LLM_TOOLS, model=model)
+        result = await module.chat_completion(messages, LLM_TOOLS, model=model)
     except Exception:
         event.status = "error"
         raise
@@ -201,16 +202,16 @@ async def _request_deepseek(
     choices = result.get("choices")
     if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
         event.status = "error"
-        raise DeepSeekError("DeepSeek returned an unexpected completion response.")
+        raise RuntimeError(f"{provider.title()} returned an unexpected completion response.")
     message = choices[0].get("message")
     if not isinstance(message, dict):
         event.status = "error"
-        raise DeepSeekError("DeepSeek returned an unexpected completion message.")
+        raise RuntimeError(f"{provider.title()} returned an unexpected completion message.")
     return message
 
 
-async def _answer_with_deepseek(
-    question: str, trace: ExecutionTrace, parent_id: str
+async def _answer_with_llm(
+    provider: str, question: str, trace: ExecutionTrace, parent_id: str
 ) -> str:
     messages: list[dict[str, object]] = [
         {"role": "system", "content": SYSTEM_PROMPT},
@@ -219,13 +220,13 @@ async def _answer_with_deepseek(
     tool_calls_made = 0
 
     for _ in range(MAX_LLM_TOOL_ROUNDS):
-        message = await _request_deepseek(messages, trace, parent_id)
+        message = await _request_llm(provider, messages, trace, parent_id)
         calls = message.get("tool_calls")
         if not isinstance(calls, list) or not calls:
             content = message.get("content")
             if isinstance(content, str) and content.strip():
                 return content.strip()
-            raise DeepSeekError("DeepSeek returned no answer.")
+            raise RuntimeError(f"{provider.title()} returned no answer.")
 
         messages.append(
             {
@@ -240,13 +241,13 @@ async def _answer_with_deepseek(
             tool_calls_made += 1
             call_id = call.get("id") if isinstance(call, dict) else None
             if not isinstance(call_id, str):
-                raise DeepSeekError("DeepSeek returned an invalid tool call.")
+                raise RuntimeError(f"{provider.title()} returned an invalid tool call.")
             result_text = await _run_model_tool(call, trace, parent_id)
             messages.append(
                 {"role": "tool", "tool_call_id": call_id, "content": result_text}
             )
 
-    raise DeepSeekError("Popcorn reached its tool-call limit before receiving a final answer.")
+    raise RuntimeError("Popcorn reached its tool-call limit before receiving a final answer.")
 
 
 async def _run_model_tool(
@@ -291,12 +292,19 @@ async def _run_model_tool(
 
 
 async def answer(question: str, trace: ExecutionTrace | None = None) -> tuple[str, ExecutionTrace]:
-    """Answer with DeepSeek when configured, otherwise retain the deterministic router."""
+    """Answer with the configured model provider, otherwise use the deterministic router."""
     trace = trace or new_trace()
     agent_event = trace.record("agent.run")
-    if deepseek.api_key():
+    try:
+        provider = llm.active_provider_name()
+    except ValueError as error:
+        provider = None
+        response = str(error)
+        trace.record("agent.response", parent_id=agent_event.event_id, response=response, status="error")
+        return response, trace
+    if provider:
         try:
-            response = await _answer_with_deepseek(question, trace, agent_event.event_id)
+            response = await _answer_with_llm(provider, question, trace, agent_event.event_id)
         except Exception as error:
             response = str(error)
         trace.record("agent.response", parent_id=agent_event.event_id, response=response)
