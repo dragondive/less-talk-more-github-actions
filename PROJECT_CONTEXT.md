@@ -40,7 +40,7 @@ The development sequence is deliberately incremental:
 
 Do not implement Popcorn Tasting during the initial Popcorn phases. Keep provider calls and orchestration replaceable. The first agent uses a deterministic, provider-independent router; a model-backed agent can be selected later without changing provider tools or skill contracts.
 
-The current implementation uses TMDB's official v3 API behind Popcorn's MCP tools. The first skills cover movie discovery/details/cast and actor movie credits. TMDB access requires an API Read Access Token supplied through `TMDB_ACCESS_TOKEN`. API results retain source links and are attributed to TMDB. No external model is connected yet.
+The current implementation uses TMDB's official v3 API behind Popcorn's MCP tools. The first skills cover movie discovery/details/cast and actor movie credits. TMDB access requires an API Read Access Token supplied through `TMDB_ACCESS_TOKEN`. API results retain source links and are attributed to TMDB. A small Starlette chat app serves the same provider-independent deterministic router; no external model is connected yet.
 
 ## 4. Popcorn: product scope
 

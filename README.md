@@ -4,11 +4,10 @@ Popcorn is an entertainment discovery agent. This first real-data slice connects
 
 ## Configure TMDB
 
-Create a TMDB account and request API access from the account's API settings. Copy the **API Read Access Token** into a local `.env` file (ignored by Git):
+Create a TMDB account and request API access from the account's API settings. Create a local `.env` file (ignored by Git) containing:
 
 ```bash
-cp .env.example .env
-# Edit .env and replace the placeholder with your API Read Access Token.
+TMDB_ACCESS_TOKEN=your_api_read_access_token_here
 ```
 
 You can also set `TMDB_ACCESS_TOKEN` in the process environment. Do not commit credentials or put them in a trace.
@@ -30,6 +29,14 @@ python3 -m popcorn --credits
 python3 -m pytest projects/popcorn/tests
 ```
 
+## Run the chat app
+
+```bash
+uvicorn popcorn.web:app --host 127.0.0.1 --port 8000
+```
+
+Open `http://127.0.0.1:8000`. The chat app calls the same deterministic Popcorn router as the CLI and exposes structured execution traces from `/api/chat`. It currently supports the movie and actor requests listed above; it does not use an LLM or retain conversation history.
+
 Popcorn uses a small deterministic intent router at this stage. Supported requests are movie details/cast lookup and a person's movie acting credits. It searches first and shows candidate choices when a name or title is ambiguous. The agent uses the official TMDB API through a replaceable adapter exposed as MCP tools; normal tests use mocked provider responses and need no credential or network.
 
 ## Skills and MCP tools
@@ -44,6 +51,12 @@ The standalone MCP server can be launched with `popcorn-mcp` after installation.
 ## Attribution
 
 This product uses the TMDB API but is not endorsed or certified by TMDB. Movie and person results include TMDB source links. The CLI prints the attribution notice with `--credits`. See [TMDB's API FAQ and attribution requirements](https://developer.themoviedb.org/docs/faq).
+
+## Deploy to Render
+
+The repository includes a Render Blueprint at `render.yaml`. In Render, create a Blueprint from this GitHub repository and provide `TMDB_ACCESS_TOKEN` when prompted. The Blueprint creates a free Python web service and disables automatic deploys so deployment happens only after GitHub Actions passes Popcorn tests.
+
+Copy the service's Deploy Hook URL from Render's Settings and add it to the GitHub repository as an Actions secret named `RENDER_DEPLOY_HOOK_URL`. The workflow skips deployment until this secret exists. Render's deploy hook is a secret; do not put its URL in source or chat. See [Render's deploy hook guide](https://render.com/docs/deploy-hooks).
 
 ## Repository layout
 

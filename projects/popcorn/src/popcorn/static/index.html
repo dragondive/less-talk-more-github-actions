@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10151b">
+  <title>Popcorn — Entertainment discovery</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #10151b; color: #f5f2eb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(ellipse at 50% -20%, #343126 0, #10151b 58%); }
+    main { width: min(760px, calc(100% - 32px)); margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+    header { padding: 44px 0 28px; text-align: center; }
+    .mark { display: inline-grid; place-items: center; width: 48px; height: 48px; border-radius: 16px; background: #f3b63f; color: #171717; font-size: 25px; }
+    h1 { margin: 12px 0 6px; font-size: 30px; letter-spacing: -.04em; }
+    header p, .suggestions p { color: #a9afb6; margin: 0; }
+    #messages { flex: 1; display: flex; flex-direction: column; gap: 16px; padding: 10px 0 22px; }
+    .message { max-width: 88%; padding: 14px 16px; border-radius: 18px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .assistant { align-self: flex-start; background: #202830; border: 1px solid #303a44; border-top-left-radius: 5px; }
+    .user { align-self: flex-end; background: #f3b63f; color: #171717; border-top-right-radius: 5px; }
+    .suggestions { padding: 8px 0 20px; }
+    .suggestions p { font-size: 13px; margin-bottom: 10px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { cursor: pointer; color: #e9e4d9; background: #1b2229; border: 1px solid #343d46; border-radius: 999px; padding: 9px 12px; font: inherit; font-size: 13px; }
+    .chip:hover { border-color: #f3b63f; }
+    form { display: flex; gap: 10px; padding: 12px; margin-bottom: 12px; background: #1b2229; border: 1px solid #343d46; border-radius: 20px; }
+    input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: #f5f2eb; font: inherit; font-size: 15px; padding: 4px 6px; }
+    input::placeholder { color: #929aa3; }
+    #send { border: 0; border-radius: 13px; background: #f3b63f; color: #171717; padding: 10px 16px; font: inherit; font-weight: 700; cursor: pointer; }
+    #send:disabled { opacity: .6; cursor: wait; }
+    footer { padding: 4px 0 22px; text-align: center; color: #929aa3; font-size: 12px; }
+    footer a { color: #d2c9b4; }
+    @media (max-width: 520px) { header { padding-top: 28px; } h1 { font-size: 26px; } .message { max-width: 96%; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="mark" aria-hidden="true">🍿</div>
+      <h1>Popcorn</h1>
+      <p>Find a movie or explore an actor’s filmography.</p>
+    </header>
+    <section id="messages" aria-live="polite" aria-label="Conversation">
+      <div class="message assistant">Hi! Ask me about a movie’s details or cast, or about the movies an actor has appeared in.</div>
+    </section>
+    <section class="suggestions" aria-label="Example questions">
+      <p>Try one of these</p>
+      <div class="chips">
+        <button class="chip" type="button">Tell me about The Matrix</button>
+        <button class="chip" type="button">Who is in The Matrix?</button>
+        <button class="chip" type="button">What movies has Keanu Reeves acted in?</button>
+      </div>
+    </section>
+    <form id="chat-form">
+      <input id="message-input" name="message" maxlength="500" autocomplete="off" placeholder="Ask about a movie or actor…" aria-label="Your message" required>
+      <button id="send" type="submit">Send</button>
+    </form>
+    <footer>This product uses the TMDB API but is not endorsed or certified by TMDB. Data provided by <a href="https://www.themoviedb.org" target="_blank" rel="noreferrer">TMDB</a>.</footer>
+  </main>
+  <script>
+    const form = document.querySelector('#chat-form');
+    const input = document.querySelector('#message-input');
+    const send = document.querySelector('#send');
+    const messages = document.querySelector('#messages');
+    function addMessage(text, role) {
+      const item = document.createElement('div');
+      item.className = `message ${role}`;
+      item.textContent = text;
+      messages.append(item);
+      item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return item;
+    }
+    document.querySelectorAll('.chip').forEach((chip) => chip.addEventListener('click', () => {
+      input.value = chip.textContent;
+      form.requestSubmit();
+    }));
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const question = input.value.trim();
+      if (!question || send.disabled) return;
+      addMessage(question, 'user');
+      input.value = '';
+      send.disabled = true;
+      const pending = addMessage('Looking that up…', 'assistant');
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: question }),
+        });
+        const data = await response.json();
+        pending.textContent = response.ok ? data.reply : (data.error || 'The request could not be completed.');
+      } catch (_error) {
+        pending.textContent = 'I could not reach Popcorn. Please try again.';
+      } finally {
+        send.disabled = false;
+        input.focus();
+      }
+    });
+  </script>
+</body>
+</html>

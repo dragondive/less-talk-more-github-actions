@@ -285,4 +285,4 @@ Do not add these to the initial Popcorn milestone without an explicit decision:
 
 ## Current next action
 
-Set `TMDB_ACCESS_TOKEN` in the local environment and run the movie and actor examples against TMDB. Then expand provider/skill coverage based on the results. Popcorn Tasting remains deferred.
+Create the Render Blueprint service, set its `TMDB_ACCESS_TOKEN`, then add its deploy hook URL as the GitHub Actions secret `RENDER_DEPLOY_HOOK_URL`. Verify the public chat app and live workflows. Popcorn Tasting remains deferred.
