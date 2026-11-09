@@ -33,12 +33,14 @@ Popcorn Tasting is not intended to be limited to entertainment agents. It should
 
 The development sequence is deliberately incremental:
 
-1. Build a small Popcorn request-to-skill-to-MCP-tool vertical slice.
-2. Build a thin Popcorn Tasting runner alongside that first slice so measurement is demonstrated end to end.
-3. Expand Popcorn's provider integrations and skills, expanding evaluation cases and coverage measurements as each capability arrives.
-4. Keep Popcorn Tasting separate and make its execution-evidence interface language-neutral before generalizing it to arbitrary agents.
+1. Build Popcorn into a functional, demonstrable agent with real provider integrations and skills.
+2. Instrument Popcorn so useful execution evidence is available from the start.
+3. Build Popcorn Tasting after Popcorn has useful real behavior, using Popcorn as its first evaluation target.
+4. Keep the evaluator independent and generalize its interface only after the Popcorn integration demonstrates the needed evidence contract.
 
-Do not build a general-purpose evaluation platform before the agent is functional. The initial runner is limited to the Popcorn vertical slice. Popcorn must have structured observability from the beginning; the runner consumes that execution evidence and keeps evaluation logic outside the agent.
+Do not implement Popcorn Tasting during the initial Popcorn phases. Keep provider calls and orchestration replaceable. The first agent uses a deterministic, provider-independent router; a model-backed agent can be selected later without changing provider tools or skill contracts.
+
+The current implementation uses TMDB's official v3 API behind Popcorn's MCP tools. The first skills cover movie discovery/details/cast and actor movie credits. TMDB access requires an API Read Access Token supplied through `TMDB_ACCESS_TOKEN`. API results retain source links and are attributed to TMDB. No external model is connected yet.
 
 ## 4. Popcorn: product scope
 
@@ -219,7 +221,7 @@ The following were deliberately deferred:
 - Large-scale web scraping.
 - A full graph database.
 - Production-grade distributed infrastructure.
-- A general-purpose Popcorn Tasting evaluation platform. The initial local runner is limited to evaluating Popcorn's first demonstrator slice.
+- Popcorn Tasting implementation until Popcorn reaches a useful working demonstration.
 
 Revisit only when a concrete demo requirement justifies it.
 
@@ -227,7 +229,7 @@ Revisit only when a concrete demo requirement justifies it.
 
 ### Decisions already agreed
 
-- Build Popcorn first; Popcorn Tasting later.
+- Build Popcorn first and defer Popcorn Tasting until Popcorn has a useful working demonstration.
 - Popcorn covers movies, TV, anime/manga, music and gaming.
 - Initial provider shortlist: TMDB, AniList, MusicBrainz and IGDB.
 - Cross-domain discovery is a key differentiator.
@@ -237,6 +239,8 @@ Revisit only when a concrete demo requirement justifies it.
 - Keep the future evaluator independent of Popcorn.
 - Avoid premature infrastructure and scope expansion.
 - Use one repository with independently organized project directories under `projects/`; keep shared docs and automation at the repository root. This also leaves room for unrelated hobby projects.
+- Begin the real agent slice with TMDB-backed movie and actor discovery using the official API behind a small custom MCP adapter.
+- Keep the first intent router provider-independent; defer a model provider decision until the live data workflows are established.
 
 ### Open questions for architecture review
 
@@ -260,4 +264,4 @@ The objective is a credible, working demonstration, not a comprehensive entertai
 
 The public project is a non-commercial demonstration. Its main purpose is to show how an agent can be measured through skill and MCP tool usage, deterministic answer checks, and rubric-based assessment of variable natural-language responses. A commercial internal project may later use the approach in an unrelated domain; it is not a Popcorn deployment target.
 
-The first local slice uses an official MCP SDK server with `greeting` and `movie_fit` skills. It checks exact greeting output and expected skill/tool invocations, then scores a movie-fit response with a transparent rubric. This demonstrates measurement mechanics only: it uses a deterministic router and fixture data, not a hosted LLM, live provider, or LLM-as-a-judge.
+Continuous evaluation remains an intended future capability. The current priority is to make Popcorn useful with real, attributed provider data and explicit skill/tool boundaries before expanding the separate evaluator.

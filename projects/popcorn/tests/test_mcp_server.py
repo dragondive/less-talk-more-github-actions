@@ -5,12 +5,15 @@ from mcp import Client
 from popcorn.mcp_server import mcp
 
 
-def test_mcp_server_exposes_working_greeting_tool():
-    async def call_tool():
+def test_mcp_server_exposes_tmdb_discovery_tools():
+    async def list_tools():
         async with Client(mcp) as client:
-            tools = await client.list_tools()
-            assert "say_hello" in {tool.name for tool in tools.tools}
-            result = await client.call_tool("say_hello", {"name": "World"})
-            return result.structured_content
+            result = await client.list_tools()
+            return {tool.name for tool in result.tools}
 
-    assert asyncio.run(call_tool()) == {"result": "Hello, World! Welcome to Popcorn."}
+    assert asyncio.run(list_tools()) == {
+        "search_movies",
+        "get_movie_details",
+        "search_people",
+        "get_person_movie_credits",
+    }

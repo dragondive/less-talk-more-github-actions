@@ -1,4 +1,4 @@
-name: Popcorn CI and evaluation
+name: Popcorn CI
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  test-and-evaluate:
+  test-popcorn:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,13 +21,4 @@ jobs:
       - name: Install Popcorn and development dependencies
         run: python -m pip install -r requirements-dev.txt
       - name: Run tests
-        run: python -m pytest
-      - name: Run golden evaluations
-        run: python -m popcorn_tasting --output artifacts/evaluation.json --coverage-output artifacts/coverage.txt
-      - name: Upload evaluation report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: popcorn-evaluation
-          path: artifacts/
-          if-no-files-found: ignore
+        run: python -m pytest projects/popcorn/tests

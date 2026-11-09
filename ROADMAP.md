@@ -1,4 +1,4 @@
-# ROADMAP.md — Popcorn and Popcorn Tasting
+# ROADMAP.md — Popcorn
 
 ## Status conventions
 
@@ -13,7 +13,7 @@ Do not mark a milestone complete until its acceptance criteria have been checked
 
 ## Overall sequence
 
-**Popcorn and a thin Popcorn Tasting runner begin together.** The runner evaluates the first Popcorn vertical slice; broader evaluation-platform features remain deferred until the demo demonstrates what they need.
+**Build Popcorn first.** Add real providers, skills, and useful user workflows. Resume Popcorn Tasting after Popcorn reaches a functional demonstration.
 
 Structured observability is included in Popcorn from the start so the separate runner can inspect execution evidence.
 
@@ -48,40 +48,38 @@ Structured observability is included in Popcorn from the start so the separate r
 
 ## Phase 1 — Popcorn foundation
 
-**Status:** IN PROGRESS
+**Status:** IN PROGRESS — real TMDB-backed slice
 
 ### Objectives
 Create the smallest runnable agent foundation.
 
 ### Candidate tasks
-- [ ] Set up Python project metadata and supported Python version.
-- [ ] Establish configuration and secrets handling.
+- [x] Set up Python project metadata and supported Python version.
+- [x] Establish environment-based configuration and secrets handling.
 - [ ] Define domain models and provider integration interfaces.
-- [x] Define an initial skill interface and basic orchestration.
-- [x] Implement a minimal request-to-response flow through an MCP tool.
+- [x] Define bounded skill modules and a lightweight intent router.
+- [x] Implement movie and actor workflows through TMDB-backed MCP tools.
 - [x] Add structured execution identifiers and events.
 - [x] Add initial unit tests and developer setup instructions.
-- [x] Add a thin Popcorn Tasting runner, golden fixture, deterministic assertions, and a transparent rubric.
-- [x] Add a GitHub Actions workflow to run tests and evaluations and upload a report.
 - [x] Organize Popcorn and Popcorn Tasting as independent sibling projects under `projects/`.
 
 ### Acceptance criteria
 - [x] A developer can install and run the application using documented steps.
 - [x] A basic request completes through the agent's execution path.
 - [x] Core logic can be tested without live provider credentials.
-- [ ] Secrets are not committed or emitted in logs.
+- [x] Provider credentials are read from the environment and omitted from traces/errors.
 - [x] The Popcorn agent does not depend on Popcorn Tasting.
 
 ### Remaining work
-- [ ] Improve trace completeness, duration reporting, and redaction checks.
-- [ ] Run the workflow on GitHub and inspect its artifact.
-- [ ] Choose a real model integration before claiming model-generated response evaluation.
+- [ ] Validate the TMDB integration with a user-provided token.
+- [ ] Improve trace timing, error metadata, and redaction checks.
+- [ ] Decide whether a model adds value after the provider workflows are established.
 
 ---
 
 ## Phase 2 — Provider integrations
 
-**Status:** NOT STARTED
+**Status:** IN PROGRESS — TMDB
 
 ### Objectives
 Connect the initial entertainment data sources behind replaceable adapters.
@@ -93,16 +91,17 @@ Connect the initial entertainment data sources behind replaceable adapters.
 - [ ] IGDB — video games.
 
 ### Tasks
-- [ ] Validate current API access, terms, attribution and rate limits.
-- [ ] Select suitable existing MCP servers or implement thin custom adapters.
-- [ ] Document each MCP server's tools and schemas.
-- [ ] Implement configuration and credential handling.
-- [ ] Add timeouts, error handling and rate-limit behaviour.
-- [ ] Add mocked tests for success, empty results, malformed responses and provider failures.
-- [ ] Add optional live connectivity checks that are not required for the normal test suite.
+- [x] Validate current TMDB authentication, attribution, endpoint coverage, and rate-limit guidance.
+- [x] Select suitable existing MCP servers or implement thin custom adapters.
+- [x] Document each MCP server's tools and schemas.
+- [x] Implement environment-based TMDB credential handling.
+- [x] Add timeouts, error handling and rate-limit messaging.
+- [x] Add mocked tests for success, malformed responses, and authentication failures.
+- [ ] Add additional mocked cases for empty search results and transient provider failures.
+- [ ] Run an optional live connectivity check when TMDB access is configured.
 
 ### Acceptance criteria
-- [ ] Each selected provider can be queried through a documented interface.
+- [ ] The first provider can be queried live through documented MCP tools.
 - [ ] Normal automated tests do not require live credentials.
 - [ ] Provider limitations are documented.
 - [ ] Tool invocations are observable.
@@ -111,13 +110,15 @@ Connect the initial entertainment data sources behind replaceable adapters.
 
 ## Phase 3 — Initial skills and orchestration
 
-**Status:** NOT STARTED
+**Status:** IN PROGRESS — movie and actor skills
 
 ### Objectives
 Deliver useful domain-specific discovery with a small, testable skill set.
 
 ### Candidate capabilities
-- [ ] Movie and TV discovery.
+- [x] Movie discovery, details, and credited cast.
+- [x] Actor movie-credit lookup.
+- [ ] TV discovery.
 - [ ] Anime and manga discovery.
 - [ ] Music discovery.
 - [ ] Game discovery.
@@ -125,10 +126,10 @@ Deliver useful domain-specific discovery with a small, testable skill set.
 - [ ] Basic recommendation behaviour where source APIs support it.
 
 ### Acceptance criteria
-- [ ] Each initial skill has a clear contract and focused tests.
-- [ ] The agent selects appropriate skills for representative requests.
-- [ ] Tool failures and missing data are handled honestly.
-- [ ] Results retain source/provider references where practical.
+- [x] Each current skill has a clear contract and focused tests.
+- [x] The agent selects the two current skills for representative requests.
+- [x] Tool failures, missing credentials, and ambiguous results are handled honestly.
+- [x] Results retain TMDB source references.
 
 Do not create a large number of nominal skills before their boundaries are justified.
 
@@ -284,4 +285,4 @@ Do not add these to the initial Popcorn milestone without an explicit decision:
 
 ## Current next action
 
-Complete Phase 0: create/open the repository, have Codex read the project documents, and request an architecture proposal for Popcorn only. Review and approve that proposal before implementation.
+Set `TMDB_ACCESS_TOKEN` in the local environment and run the movie and actor examples against TMDB. Then expand provider/skill coverage based on the results. Popcorn Tasting remains deferred.

@@ -11,6 +11,7 @@ dependencies = ["mcp==2.3.0"]
 
 [project.scripts]
 popcorn = "popcorn.__main__:main"
+popcorn-mcp = "popcorn.mcp_server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

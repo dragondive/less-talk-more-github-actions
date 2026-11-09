@@ -1,7 +1,8 @@
-"""A small skill router that calls the local MCP server."""
+"""A lightweight Popcorn intent router that invokes TMDB-backed MCP skills."""
 
 from __future__ import annotations
 
+import re
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -9,6 +10,7 @@ from uuid import uuid4
 from mcp import Client
 
 from popcorn.mcp_server import mcp
+from popcorn.skills import actor_filmography, movie_discovery
 
 
 @dataclass
@@ -62,16 +64,41 @@ def new_trace() -> ExecutionTrace:
     return ExecutionTrace(request_id=str(uuid4()), execution_id=str(uuid4()))
 
 
+def _intent(question: str) -> tuple[str, str] | None:
+    value = question.strip().rstrip("?.!")
+    actor_patterns = (
+        r"(?:what )?movies has (.+?) acted in",
+        r"movies (?:with|by) (.+)",
+        r"(?:list )?(?:the )?movies starring (.+)",
+        r"filmography (?:of|for) (.+)",
+    )
+    for pattern in actor_patterns:
+        match = re.fullmatch(pattern, value, flags=re.IGNORECASE)
+        if match and match.group(1).strip():
+            return actor_filmography.SKILL_NAME, match.group(1).strip()
+
+    movie_patterns = (
+        r"(?:movie|film):\s*(.+)",
+        r"(?:tell me about|details (?:for|of)|cast of|who stars in|who is in)\s+(.+)",
+        r"who are (?:the )?(?:actors|cast) (?:in|of)\s+(.+)",
+    )
+    for pattern in movie_patterns:
+        match = re.fullmatch(pattern, value, flags=re.IGNORECASE)
+        if match and match.group(1).strip():
+            return movie_discovery.SKILL_NAME, match.group(1).strip()
+    return None
+
+
 async def _call_tool(
     tool_name: str,
     arguments: dict[str, object],
     trace: ExecutionTrace,
     parent_id: str,
 ) -> object:
-    call_event = trace.record(
+    event = trace.record(
         "mcp.tool.call",
         parent_id=parent_id,
-        server="popcorn-demo",
+        server="popcorn-tmdb",
         tool=tool_name,
         arguments=arguments,
     )
@@ -79,52 +106,49 @@ async def _call_tool(
         async with Client(mcp) as client:
             result = await client.call_tool(tool_name, arguments)
         if result.is_error:
-            call_event.status = "error"
-            raise RuntimeError(f"MCP tool failed: {tool_name}")
+            event.status = "error"
+            message = "; ".join(
+                item.text for item in result.content if getattr(item, "text", None)
+            )
+            raise RuntimeError(message or f"MCP tool failed: {tool_name}")
         structured = result.structured_content
         if structured is None:
             raise RuntimeError(f"MCP tool returned no structured content: {tool_name}")
-        if set(structured) == {"result"}:
-            return structured["result"]
-        return structured
+        if isinstance(structured.get("error"), str):
+            raise RuntimeError(structured["error"])
+        return structured.get("result") if set(structured) == {"result"} else structured
     except Exception:
-        call_event.status = "error"
+        event.status = "error"
         raise
 
 
 async def answer(question: str, trace: ExecutionTrace | None = None) -> tuple[str, ExecutionTrace]:
-    """Handle a request through a skill and an MCP tool."""
+    """Route a movie/person question to one bounded Popcorn skill."""
     trace = trace or new_trace()
     agent_event = trace.record("agent.run")
-    normalized = question.strip()
-
-    if normalized.casefold().startswith("movie fit:"):
-        skill_name = "movie_fit"
-        skill_event = trace.record("skill.invoke", parent_id=agent_event.event_id, skill=skill_name)
-        title = normalized.partition(":")[2].strip() or "The Matrix"
-        profile = await _call_tool(
-            "get_movie_profile", {"title": title}, trace, skill_event.event_id
-        )
-        if not isinstance(profile, dict):
-            raise TypeError("Movie profile MCP tool returned an invalid result")
+    intent = _intent(question)
+    if intent is None:
         response = (
-            f"{profile['title']} may suit an action fan: it is listed as "
-            f"{profile['genres']} and described as {profile['tone']}. "
-            f"Source: {profile['source']}."
+            "I can look up movie details and cast, or list a person's movie acting credits. "
+            "Try 'Tell me about The Matrix', 'Who is in The Matrix', or "
+            "'What movies has Keanu Reeves acted in?'."
         )
-    else:
-        skill_name = "greeting"
-        skill_event = trace.record("skill.invoke", parent_id=agent_event.event_id, skill=skill_name)
-        folded = normalized.casefold()
-        if folded.startswith("hello"):
-            name = normalized[len("hello") :].strip(" ,.!?") or "World"
-        elif folded.startswith("hi"):
-            name = normalized[len("hi") :].strip(" ,.!?") or "World"
+        trace.record("agent.response", parent_id=agent_event.event_id, response=response)
+        return response, trace
+
+    skill_name, query = intent
+    skill_event = trace.record("skill.invoke", parent_id=agent_event.event_id, skill=skill_name)
+
+    async def invoke(tool: str, arguments: dict[str, object]) -> object:
+        return await _call_tool(tool, arguments, trace, skill_event.event_id)
+
+    try:
+        if skill_name == movie_discovery.SKILL_NAME:
+            response = await movie_discovery.run(query, invoke)
         else:
-            name = normalized or "World"
-        response = await _call_tool("say_hello", {"name": name}, trace, skill_event.event_id)
-        if not isinstance(response, str):
-            raise TypeError("Greeting MCP tool returned an invalid result")
+            response = await actor_filmography.run(query, invoke)
+    except Exception as error:
+        response = str(error)
 
     trace.record(
         "agent.response",
