@@ -15,5 +15,7 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
+      - key: SARVAM_API_KEY
+        sync: false
       - key: LLM_PROVIDER
-        value: gemini
+        value: sarvam

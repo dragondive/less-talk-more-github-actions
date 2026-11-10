@@ -6,6 +6,12 @@ from popcorn import gemini
 from popcorn import llm
 from popcorn import mcp_server
 from popcorn import deepseek
+from popcorn import sarvam
+
+
+@pytest.fixture(autouse=True)
+def do_not_use_local_sarvam_credentials(monkeypatch):
+    monkeypatch.setattr(sarvam, "api_key", lambda: "")
 
 
 class FakeTMDB:

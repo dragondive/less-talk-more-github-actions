@@ -75,7 +75,8 @@ Create the smallest runnable agent foundation.
 - [ ] Improve trace timing, error metadata, and redaction checks.
 - [x] Add an optional LLM provider for natural-language skill selection and response phrasing.
 - [x] Add Gemini as a selectable LLM provider while retaining DeepSeek.
-- [ ] Configure a Gemini API key on Render and validate live model-to-skill-to-MCP flow.
+- [x] Add Sarvam as the selected model provider while retaining Gemini and DeepSeek.
+- [ ] Configure the Sarvam API key on Render and validate live model-to-skill-to-MCP flow.
 
 ---
 
@@ -311,4 +312,4 @@ Do not add these to the initial Popcorn milestone without an explicit decision:
 
 ## Current next action
 
-Deploy the `/tests` dashboard and verify the latest-run comparison against retained history. After that setup is stable, add the real LLM and evaluate model-selected skill/tool behavior. DeepSeek remains selectable with `LLM_PROVIDER=deepseek`; Gemini remains selectable with `LLM_PROVIDER=gemini`.
+Configure `SARVAM_API_KEY` on the deployed Render service, then validate the deployed Sarvam-to-skill-to-MCP flow. A local live call to Sarvam and TMDB succeeded; the deployed service still needs its key set. DeepSeek and Gemini remain selectable alternatives.
