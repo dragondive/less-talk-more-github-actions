@@ -1,30 +1,2172 @@
 {
-  "version": "1.0",
-  "description": "Conversational offline E2E evaluations through Popcorn's agent, skills, MCP server and provider adapter boundaries.",
+  "version": "2.0",
+  "description": "98 natural-language scenarios across movie, music and anime discovery. The cases vary user intent and phrasing while checking provider evidence, follow-up context, deterministic facts, rubric-scored answer variants, and cross-domain uncertainty.",
   "cases": [
     {
       "id": "matrix-context-follow-up",
       "turns": [
-        {"input": "Could you tell me about the movie The Matrix?", "expected_skills": ["movie_discovery"], "expected_tools": ["search_movies", "get_movie_details"], "must_include": ["1999", "science fiction", "TMDB"]},
-        {"input": "And who plays Trinity in it?", "expected_skills": ["movie_discovery"], "expected_tools": ["search_movies", "get_movie_details"], "history_contains": {"user": "The Matrix", "assistant": "science fiction"}, "must_include": ["Carrie-Anne Moss", "Trinity"]}
+        {
+          "input": "Could you tell me about the movie The Matrix?",
+          "expected_skills": [
+            "movie_discovery"
+          ],
+          "expected_tools": [
+            "search_movies",
+            "get_movie_details"
+          ],
+          "must_include": [
+            "1999",
+            "science fiction",
+            "TMDB"
+          ]
+        },
+        {
+          "input": "And who plays Trinity in it?",
+          "expected_skills": [
+            "movie_discovery"
+          ],
+          "expected_tools": [
+            "search_movies",
+            "get_movie_details"
+          ],
+          "history_contains": {
+            "user": "The Matrix",
+            "assistant": "science fiction"
+          },
+          "must_include": [
+            "Carrie-Anne Moss",
+            "Trinity"
+          ]
+        }
       ],
-      "expected_sequence": ["movie_discovery", "movie_discovery"]
+      "expected_sequence": [
+        "movie_discovery",
+        "movie_discovery"
+      ]
     },
     {
       "id": "cross-domain-movie-and-music-no-link-inference",
       "turns": [
-        {"input": "I like The Matrix. What is it about?", "expected_skills": ["movie_discovery"], "expected_tools": ["search_movies", "get_movie_details"], "rubric": {"minimum_score": 0.66, "criteria": [{"name": "uses sourced genre", "terms": ["science fiction"], "weight": 0.5}, {"name": "includes movie evidence", "terms": ["TMDB", "Keanu Reeves"], "weight": 0.5}], "sample_responses": ["TMDB lists The Matrix as science fiction, featuring Keanu Reeves.", "The Matrix is listed by TMDB as science fiction with Keanu Reeves."]}},
-        {"input": "Find me some music by Radiohead too. Is it linked to that film?", "expected_skills": ["music_discovery"], "expected_tools": ["search_musicbrainz_artists", "get_musicbrainz_artist", "get_musicbrainz_artist_release_groups"], "history_contains": {"user": "The Matrix", "assistant": "science fiction"}, "must_include": ["no soundtrack relationship", "MusicBrainz", "OK Computer"]}
+        {
+          "input": "I like The Matrix. What is it about?",
+          "expected_skills": [
+            "movie_discovery"
+          ],
+          "expected_tools": [
+            "search_movies",
+            "get_movie_details"
+          ],
+          "rubric": {
+            "minimum_score": 0.66,
+            "criteria": [
+              {
+                "name": "uses sourced genre",
+                "terms": [
+                  "science fiction"
+                ],
+                "weight": 0.5
+              },
+              {
+                "name": "includes movie evidence",
+                "terms": [
+                  "TMDB",
+                  "Keanu Reeves"
+                ],
+                "weight": 0.5
+              }
+            ],
+            "sample_responses": [
+              "TMDB lists The Matrix as science fiction, featuring Keanu Reeves.",
+              "The Matrix is listed by TMDB as science fiction with Keanu Reeves."
+            ]
+          }
+        },
+        {
+          "input": "Find me some music by Radiohead too. Is it linked to that film?",
+          "expected_skills": [
+            "music_discovery"
+          ],
+          "expected_tools": [
+            "search_musicbrainz_artists",
+            "get_musicbrainz_artist",
+            "get_musicbrainz_artist_release_groups"
+          ],
+          "history_contains": {
+            "user": "The Matrix",
+            "assistant": "science fiction"
+          },
+          "must_include": [
+            "no soundtrack relationship",
+            "MusicBrainz",
+            "OK Computer"
+          ]
+        }
       ],
-      "expected_sequence": ["movie_discovery", "music_discovery"]
+      "expected_sequence": [
+        "movie_discovery",
+        "music_discovery"
+      ]
     },
     {
       "id": "anilist-title-and-character-evidence",
       "turns": [
-        {"input": "Tell me about the anime Cowboy Bebop.", "expected_skills": ["anime_manga_discovery"], "expected_tools": ["search_anilist_media", "get_anilist_media_details"], "must_include": ["1998", "Spike Spiegel", "AniList"], "rubric": {"minimum_score": 0.5, "criteria": [{"name": "identifies work and year", "terms": ["Cowboy Bebop", "1998"], "weight": 0.5}, {"name": "retains sourced character relation", "terms": ["Spike Spiegel"], "weight": 0.5}], "sample_responses": ["AniList lists Cowboy Bebop as a 1998 TV anime and names Spike Spiegel as a main character.", "Cowboy Bebop (1998) is a TV anime; AniList associates main character Spike Spiegel."]}},
-        {"input": "Does AniList list a relation to another title?", "expected_skills": ["anime_manga_discovery"], "expected_tools": ["search_anilist_media", "get_anilist_media_details"], "history_contains": {"user": "Cowboy Bebop", "assistant": "Spike Spiegel"}, "must_include": ["PREQUEL", "The Movie"]}
+        {
+          "input": "Tell me about the anime Cowboy Bebop.",
+          "expected_skills": [
+            "anime_manga_discovery"
+          ],
+          "expected_tools": [
+            "search_anilist_media",
+            "get_anilist_media_details"
+          ],
+          "must_include": [
+            "1998",
+            "Spike Spiegel",
+            "AniList"
+          ],
+          "rubric": {
+            "minimum_score": 0.5,
+            "criteria": [
+              {
+                "name": "identifies work and year",
+                "terms": [
+                  "Cowboy Bebop",
+                  "1998"
+                ],
+                "weight": 0.5
+              },
+              {
+                "name": "retains sourced character relation",
+                "terms": [
+                  "Spike Spiegel"
+                ],
+                "weight": 0.5
+              }
+            ],
+            "sample_responses": [
+              "AniList lists Cowboy Bebop as a 1998 TV anime and names Spike Spiegel as a main character.",
+              "Cowboy Bebop (1998) is a TV anime; AniList associates main character Spike Spiegel."
+            ]
+          }
+        },
+        {
+          "input": "Does AniList list a relation to another title?",
+          "expected_skills": [
+            "anilist_relation_exploration"
+          ],
+          "expected_tools": [
+            "search_anilist_media",
+            "get_anilist_media_details"
+          ],
+          "history_contains": {
+            "user": "Cowboy Bebop",
+            "assistant": "Spike Spiegel"
+          },
+          "must_include": [
+            "SIDE_STORY",
+            "Knockin' on Heaven's Door"
+          ]
+        }
       ],
-      "expected_sequence": ["anime_manga_discovery", "anime_manga_discovery"]
+      "expected_sequence": [
+        "anime_manga_discovery",
+        "anilist_relation_exploration"
+      ]
+    },
+    {
+      "id": "movie-conversation-01",
+      "scenario_type": "movie",
+      "input": "Give me a quick overview of the movie The Matrix.",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-02",
+      "scenario_type": "movie",
+      "input": "What is the basic premise of The Matrix?",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-03",
+      "scenario_type": "movie",
+      "input": "Who are the main cast members in The Matrix?",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-04",
+      "scenario_type": "movie",
+      "input": "Who plays Trinity in The Matrix?",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ],
+      "rubric": {
+        "minimum_score": 0.5,
+        "criteria": [
+          {
+            "name": "provider grounded",
+            "terms": [
+              "TMDB"
+            ],
+            "weight": 0.5
+          },
+          {
+            "name": "includes genre",
+            "terms": [
+              "science fiction"
+            ],
+            "weight": 0.5
+          }
+        ],
+        "sample_responses": [
+          "TMDB lists The Matrix as science fiction and includes credited cast.",
+          "The Matrix is identified by TMDB as an action and science fiction film with Keanu Reeves.",
+          "TMDB's The Matrix record includes its science fiction genre and actors."
+        ]
+      }
+    },
+    {
+      "id": "movie-conversation-05",
+      "scenario_type": "movie",
+      "input": "Who plays Neo in The Matrix?",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-06",
+      "scenario_type": "movie",
+      "input": "What year did The Matrix come out?",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-07",
+      "scenario_type": "movie",
+      "input": "Which genres does TMDB list for The Matrix?",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-08",
+      "scenario_type": "movie",
+      "input": "Can you summarize the plot of The Matrix from TMDB?",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-09",
+      "scenario_type": "movie",
+      "input": "I'm deciding whether to watch The Matrix; what details does TMDB provide?",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ],
+      "rubric": {
+        "minimum_score": 0.5,
+        "criteria": [
+          {
+            "name": "provider grounded",
+            "terms": [
+              "TMDB"
+            ],
+            "weight": 0.5
+          },
+          {
+            "name": "includes genre",
+            "terms": [
+              "science fiction"
+            ],
+            "weight": 0.5
+          }
+        ],
+        "sample_responses": [
+          "TMDB lists The Matrix as science fiction and includes credited cast.",
+          "The Matrix is identified by TMDB as an action and science fiction film with Keanu Reeves.",
+          "TMDB's The Matrix record includes its science fiction genre and actors."
+        ]
+      }
+    },
+    {
+      "id": "movie-conversation-10",
+      "scenario_type": "movie",
+      "input": "Tell me the cast and genre for The Matrix.",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-11",
+      "scenario_type": "movie",
+      "input": "What should I know about the film The Matrix before watching?",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-12",
+      "scenario_type": "movie",
+      "input": "Can you identify the lead actors in The Matrix?",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-13",
+      "scenario_type": "movie",
+      "input": "Does TMDB classify The Matrix as science fiction?",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-14",
+      "scenario_type": "movie",
+      "input": "Is The Matrix an action film, and who stars in it?",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ],
+      "rubric": {
+        "minimum_score": 0.5,
+        "criteria": [
+          {
+            "name": "provider grounded",
+            "terms": [
+              "TMDB"
+            ],
+            "weight": 0.5
+          },
+          {
+            "name": "includes genre",
+            "terms": [
+              "science fiction"
+            ],
+            "weight": 0.5
+          }
+        ],
+        "sample_responses": [
+          "TMDB lists The Matrix as science fiction and includes credited cast.",
+          "The Matrix is identified by TMDB as an action and science fiction film with Keanu Reeves.",
+          "TMDB's The Matrix record includes its science fiction genre and actors."
+        ]
+      }
+    },
+    {
+      "id": "movie-conversation-15",
+      "scenario_type": "movie",
+      "input": "Remind me what happens in The Matrix.",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-16",
+      "scenario_type": "movie",
+      "input": "Share the release year and credited cast for The Matrix.",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-17",
+      "scenario_type": "movie",
+      "input": "Could you describe The Matrix without spoilers, using its listing details?",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-18",
+      "scenario_type": "movie",
+      "input": "What is notable in the TMDB listing for The Matrix?",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-19",
+      "scenario_type": "movie",
+      "input": "Who appears opposite Keanu Reeves in The Matrix?",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ],
+      "rubric": {
+        "minimum_score": 0.5,
+        "criteria": [
+          {
+            "name": "provider grounded",
+            "terms": [
+              "TMDB"
+            ],
+            "weight": 0.5
+          },
+          {
+            "name": "includes genre",
+            "terms": [
+              "science fiction"
+            ],
+            "weight": 0.5
+          }
+        ],
+        "sample_responses": [
+          "TMDB lists The Matrix as science fiction and includes credited cast.",
+          "The Matrix is identified by TMDB as an action and science fiction film with Keanu Reeves.",
+          "TMDB's The Matrix record includes its science fiction genre and actors."
+        ]
+      }
+    },
+    {
+      "id": "movie-conversation-20",
+      "scenario_type": "movie",
+      "input": "Which character does Carrie-Anne Moss play in The Matrix?",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-21",
+      "scenario_type": "movie",
+      "input": "Give me the runtime, genres, and cast for The Matrix.",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-22",
+      "scenario_type": "movie",
+      "input": "What facts can you confirm about The Matrix from TMDB?",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-23",
+      "scenario_type": "movie",
+      "input": "Please give me a concise movie card for The Matrix.",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-24",
+      "scenario_type": "movie",
+      "input": "I'd like the synopsis and top cast of The Matrix.",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ],
+      "rubric": {
+        "minimum_score": 0.5,
+        "criteria": [
+          {
+            "name": "provider grounded",
+            "terms": [
+              "TMDB"
+            ],
+            "weight": 0.5
+          },
+          {
+            "name": "includes genre",
+            "terms": [
+              "science fiction"
+            ],
+            "weight": 0.5
+          }
+        ],
+        "sample_responses": [
+          "TMDB lists The Matrix as science fiction and includes credited cast.",
+          "The Matrix is identified by TMDB as an action and science fiction film with Keanu Reeves.",
+          "TMDB's The Matrix record includes its science fiction genre and actors."
+        ]
+      }
+    },
+    {
+      "id": "movie-conversation-25",
+      "scenario_type": "movie",
+      "input": "List the genre and two credited actors for The Matrix.",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-26",
+      "scenario_type": "movie",
+      "input": "What does the provider record say about The Matrix?",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-27",
+      "scenario_type": "movie",
+      "input": "Could you recap the key movie details for The Matrix?",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-28",
+      "scenario_type": "movie",
+      "input": "Does The Matrix have a credited cast listing? Tell me who is in it.",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ]
+    },
+    {
+      "id": "movie-conversation-29",
+      "scenario_type": "movie",
+      "input": "I forgot the details of The Matrix; can you refresh my memory?",
+      "expected_skills": [
+        "movie_discovery"
+      ],
+      "expected_tools": [
+        "search_movies",
+        "get_movie_details"
+      ],
+      "must_include": [
+        "The Matrix",
+        "TMDB"
+      ],
+      "rubric": {
+        "minimum_score": 0.5,
+        "criteria": [
+          {
+            "name": "provider grounded",
+            "terms": [
+              "TMDB"
+            ],
+            "weight": 0.5
+          },
+          {
+            "name": "includes genre",
+            "terms": [
+              "science fiction"
+            ],
+            "weight": 0.5
+          }
+        ],
+        "sample_responses": [
+          "TMDB lists The Matrix as science fiction and includes credited cast.",
+          "The Matrix is identified by TMDB as an action and science fiction film with Keanu Reeves.",
+          "TMDB's The Matrix record includes its science fiction genre and actors."
+        ]
+      }
+    },
+    {
+      "id": "music-conversation-01",
+      "scenario_type": "music",
+      "input": "Find the MusicBrainz artist record for Radiohead.",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-02",
+      "scenario_type": "music",
+      "input": "What releases are listed for Radiohead in MusicBrainz?",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-03",
+      "scenario_type": "music",
+      "input": "Tell me about the artist Radiohead and a few release groups.",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-04",
+      "scenario_type": "music",
+      "input": "Can you look up Radiohead's MusicBrainz profile?",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ],
+      "rubric": {
+        "minimum_score": 0.5,
+        "criteria": [
+          {
+            "name": "provider grounded",
+            "terms": [
+              "MusicBrainz"
+            ],
+            "weight": 0.5
+          },
+          {
+            "name": "reports artist/release",
+            "terms": [
+              "Radiohead",
+              "OK Computer"
+            ],
+            "weight": 0.5
+          }
+        ],
+        "sample_responses": [
+          "MusicBrainz lists Radiohead and release group OK Computer.",
+          "Radiohead has a MusicBrainz artist record; OK Computer is a listed release group.",
+          "MusicBrainz provides the Radiohead entry and its OK Computer release group."
+        ]
+      }
+    },
+    {
+      "id": "music-conversation-05",
+      "scenario_type": "music",
+      "input": "Which albums or EPs does MusicBrainz associate with Radiohead?",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-06",
+      "scenario_type": "music",
+      "input": "I want to explore Radiohead; what artist details and releases are listed?",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-07",
+      "scenario_type": "music",
+      "input": "Is Radiohead a group or a solo artist according to MusicBrainz?",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-08",
+      "scenario_type": "music",
+      "input": "Give me a concise discography lookup for Radiohead.",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-09",
+      "scenario_type": "music",
+      "input": "What release groups can you find for Radiohead?",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ],
+      "rubric": {
+        "minimum_score": 0.5,
+        "criteria": [
+          {
+            "name": "provider grounded",
+            "terms": [
+              "MusicBrainz"
+            ],
+            "weight": 0.5
+          },
+          {
+            "name": "reports artist/release",
+            "terms": [
+              "Radiohead",
+              "OK Computer"
+            ],
+            "weight": 0.5
+          }
+        ],
+        "sample_responses": [
+          "MusicBrainz lists Radiohead and release group OK Computer.",
+          "Radiohead has a MusicBrainz artist record; OK Computer is a listed release group.",
+          "MusicBrainz provides the Radiohead entry and its OK Computer release group."
+        ]
+      }
+    },
+    {
+      "id": "music-conversation-10",
+      "scenario_type": "music",
+      "input": "Please identify Radiohead and summarize its catalog records.",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-11",
+      "scenario_type": "music",
+      "input": "Could you check whether MusicBrainz has a record for Radiohead?",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-12",
+      "scenario_type": "music",
+      "input": "Show the artist area and selected releases for Radiohead.",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-13",
+      "scenario_type": "music",
+      "input": "I'm listening to Radiohead; what metadata and releases are available?",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-14",
+      "scenario_type": "music",
+      "input": "Can you find albums by Radiohead in MusicBrainz?",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ],
+      "rubric": {
+        "minimum_score": 0.5,
+        "criteria": [
+          {
+            "name": "provider grounded",
+            "terms": [
+              "MusicBrainz"
+            ],
+            "weight": 0.5
+          },
+          {
+            "name": "reports artist/release",
+            "terms": [
+              "Radiohead",
+              "OK Computer"
+            ],
+            "weight": 0.5
+          }
+        ],
+        "sample_responses": [
+          "MusicBrainz lists Radiohead and release group OK Computer.",
+          "Radiohead has a MusicBrainz artist record; OK Computer is a listed release group.",
+          "MusicBrainz provides the Radiohead entry and its OK Computer release group."
+        ]
+      }
+    },
+    {
+      "id": "music-conversation-15",
+      "scenario_type": "music",
+      "input": "What does the MusicBrainz artist page say about Radiohead?",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-16",
+      "scenario_type": "music",
+      "input": "Look up the band Radiohead and report a listed release.",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-17",
+      "scenario_type": "music",
+      "input": "I'd like sourced artist metadata for Radiohead.",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-18",
+      "scenario_type": "music",
+      "input": "What is one release group associated with Radiohead?",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-19",
+      "scenario_type": "music",
+      "input": "Tell me whether Radiohead has an artist entry and albums listed.",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ],
+      "rubric": {
+        "minimum_score": 0.5,
+        "criteria": [
+          {
+            "name": "provider grounded",
+            "terms": [
+              "MusicBrainz"
+            ],
+            "weight": 0.5
+          },
+          {
+            "name": "reports artist/release",
+            "terms": [
+              "Radiohead",
+              "OK Computer"
+            ],
+            "weight": 0.5
+          }
+        ],
+        "sample_responses": [
+          "MusicBrainz lists Radiohead and release group OK Computer.",
+          "Radiohead has a MusicBrainz artist record; OK Computer is a listed release group.",
+          "MusicBrainz provides the Radiohead entry and its OK Computer release group."
+        ]
+      }
+    },
+    {
+      "id": "music-conversation-20",
+      "scenario_type": "music",
+      "input": "Can you browse Radiohead's album records?",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-21",
+      "scenario_type": "music",
+      "input": "Find a few official release-group records for Radiohead.",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-22",
+      "scenario_type": "music",
+      "input": "What country or area is listed for Radiohead?",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-23",
+      "scenario_type": "music",
+      "input": "Give me artist details for Radiohead and avoid guessing soundtrack links.",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-24",
+      "scenario_type": "music",
+      "input": "Is Radiohead represented as an artist in MusicBrainz?",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ],
+      "rubric": {
+        "minimum_score": 0.5,
+        "criteria": [
+          {
+            "name": "provider grounded",
+            "terms": [
+              "MusicBrainz"
+            ],
+            "weight": 0.5
+          },
+          {
+            "name": "reports artist/release",
+            "terms": [
+              "Radiohead",
+              "OK Computer"
+            ],
+            "weight": 0.5
+          }
+        ],
+        "sample_responses": [
+          "MusicBrainz lists Radiohead and release group OK Computer.",
+          "Radiohead has a MusicBrainz artist record; OK Computer is a listed release group.",
+          "MusicBrainz provides the Radiohead entry and its OK Computer release group."
+        ]
+      }
+    },
+    {
+      "id": "music-conversation-25",
+      "scenario_type": "music",
+      "input": "Please retrieve the public artist information for Radiohead.",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-26",
+      "scenario_type": "music",
+      "input": "What recorded releases are linked to the artist Radiohead?",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-27",
+      "scenario_type": "music",
+      "input": "Can you summarize the MusicBrainz candidate and its releases for Radiohead?",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-28",
+      "scenario_type": "music",
+      "input": "I want metadata rather than recommendations for Radiohead; what is listed?",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-conversation-29",
+      "scenario_type": "music",
+      "input": "Could you check artist credits and release groups for Radiohead?",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists",
+        "get_musicbrainz_artist",
+        "get_musicbrainz_artist_release_groups"
+      ],
+      "must_include": [
+        "Radiohead",
+        "MusicBrainz"
+      ],
+      "rubric": {
+        "minimum_score": 0.5,
+        "criteria": [
+          {
+            "name": "provider grounded",
+            "terms": [
+              "MusicBrainz"
+            ],
+            "weight": 0.5
+          },
+          {
+            "name": "reports artist/release",
+            "terms": [
+              "Radiohead",
+              "OK Computer"
+            ],
+            "weight": 0.5
+          }
+        ],
+        "sample_responses": [
+          "MusicBrainz lists Radiohead and release group OK Computer.",
+          "Radiohead has a MusicBrainz artist record; OK Computer is a listed release group.",
+          "MusicBrainz provides the Radiohead entry and its OK Computer release group."
+        ]
+      }
+    },
+    {
+      "id": "anime-conversation-01",
+      "scenario_type": "anime",
+      "input": "Tell me about the anime Cowboy Bebop.",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-02",
+      "scenario_type": "anime",
+      "input": "What is the premise and format of Cowboy Bebop?",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-03",
+      "scenario_type": "anime",
+      "input": "Which characters are associated with Cowboy Bebop in AniList?",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-04",
+      "scenario_type": "anime",
+      "input": "Does AniList list a relation for Cowboy Bebop?",
+      "expected_skills": [
+        "anilist_relation_exploration"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ],
+      "rubric": {
+        "minimum_score": 0.5,
+        "criteria": [
+          {
+            "name": "provider grounded",
+            "terms": [
+              "AniList"
+            ],
+            "weight": 0.5
+          },
+          {
+            "name": "reports title/character",
+            "terms": [
+              "Cowboy Bebop",
+              "Spike Spiegel"
+            ],
+            "weight": 0.5
+          }
+        ],
+        "sample_responses": [
+          "AniList lists Cowboy Bebop and names Spike Spiegel among its characters.",
+          "The AniList Cowboy Bebop record includes character Spike Spiegel.",
+          "AniList has a Cowboy Bebop entry with Spike Spiegel character evidence."
+        ]
+      }
+    },
+    {
+      "id": "anime-conversation-05",
+      "scenario_type": "anime",
+      "input": "What year and status does AniList show for Cowboy Bebop?",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-06",
+      "scenario_type": "anime",
+      "input": "Can you give me an AniList summary of Cowboy Bebop?",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-07",
+      "scenario_type": "anime",
+      "input": "Who is a main character in Cowboy Bebop?",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-08",
+      "scenario_type": "anime",
+      "input": "What related media does AniList explicitly list for Cowboy Bebop?",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-09",
+      "scenario_type": "anime",
+      "input": "I'm considering Cowboy Bebop; what sourced details are available?",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ],
+      "rubric": {
+        "minimum_score": 0.5,
+        "criteria": [
+          {
+            "name": "provider grounded",
+            "terms": [
+              "AniList"
+            ],
+            "weight": 0.5
+          },
+          {
+            "name": "reports title/character",
+            "terms": [
+              "Cowboy Bebop",
+              "Spike Spiegel"
+            ],
+            "weight": 0.5
+          }
+        ],
+        "sample_responses": [
+          "AniList lists Cowboy Bebop and names Spike Spiegel among its characters.",
+          "The AniList Cowboy Bebop record includes character Spike Spiegel.",
+          "AniList has a Cowboy Bebop entry with Spike Spiegel character evidence."
+        ]
+      }
+    },
+    {
+      "id": "anime-conversation-10",
+      "scenario_type": "anime",
+      "input": "Is Cowboy Bebop a finished TV anime according to AniList?",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-11",
+      "scenario_type": "anime",
+      "input": "Share the synopsis, year, and characters for Cowboy Bebop.",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-12",
+      "scenario_type": "anime",
+      "input": "What genres does AniList list for Cowboy Bebop?",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-13",
+      "scenario_type": "anime",
+      "input": "Can you check the title record for Cowboy Bebop?",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-14",
+      "scenario_type": "anime",
+      "input": "Give me a concise anime profile for Cowboy Bebop.",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ],
+      "rubric": {
+        "minimum_score": 0.5,
+        "criteria": [
+          {
+            "name": "provider grounded",
+            "terms": [
+              "AniList"
+            ],
+            "weight": 0.5
+          },
+          {
+            "name": "reports title/character",
+            "terms": [
+              "Cowboy Bebop",
+              "Spike Spiegel"
+            ],
+            "weight": 0.5
+          }
+        ],
+        "sample_responses": [
+          "AniList lists Cowboy Bebop and names Spike Spiegel among its characters.",
+          "The AniList Cowboy Bebop record includes character Spike Spiegel.",
+          "AniList has a Cowboy Bebop entry with Spike Spiegel character evidence."
+        ]
+      }
+    },
+    {
+      "id": "anime-conversation-15",
+      "scenario_type": "anime",
+      "input": "What character evidence appears on the AniList page for Cowboy Bebop?",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-16",
+      "scenario_type": "anime",
+      "input": "Are there explicit relation edges on Cowboy Bebop's AniList entry?",
+      "expected_skills": [
+        "anilist_relation_exploration"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-17",
+      "scenario_type": "anime",
+      "input": "Please summarize the returned metadata for Cowboy Bebop.",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-18",
+      "scenario_type": "anime",
+      "input": "What does AniList say about the release status of Cowboy Bebop?",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-19",
+      "scenario_type": "anime",
+      "input": "Tell me about the main character Spike Spiegel in relation to Cowboy Bebop.",
+      "expected_skills": [
+        "anilist_character_exploration"
+      ],
+      "expected_tools": [
+        "search_anilist_characters",
+        "get_anilist_character_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ],
+      "rubric": {
+        "minimum_score": 0.5,
+        "criteria": [
+          {
+            "name": "provider grounded",
+            "terms": [
+              "AniList"
+            ],
+            "weight": 0.5
+          },
+          {
+            "name": "reports title/character",
+            "terms": [
+              "Cowboy Bebop",
+              "Spike Spiegel"
+            ],
+            "weight": 0.5
+          }
+        ],
+        "sample_responses": [
+          "AniList lists Cowboy Bebop and names Spike Spiegel among its characters.",
+          "The AniList Cowboy Bebop record includes character Spike Spiegel.",
+          "AniList has a Cowboy Bebop entry with Spike Spiegel character evidence."
+        ]
+      }
+    },
+    {
+      "id": "anime-conversation-20",
+      "scenario_type": "anime",
+      "input": "What provider links and title details are available for Cowboy Bebop?",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-21",
+      "scenario_type": "anime",
+      "input": "Is there a documented sequel, prequel, or other relation for Cowboy Bebop?",
+      "expected_skills": [
+        "anilist_relation_exploration"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-22",
+      "scenario_type": "anime",
+      "input": "Give me a factual overview of Cowboy Bebop, citing AniList data.",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-23",
+      "scenario_type": "anime",
+      "input": "What can you confirm about Cowboy Bebop's story and format?",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-24",
+      "scenario_type": "anime",
+      "input": "Which related work appears in the AniList result for Cowboy Bebop?",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ],
+      "rubric": {
+        "minimum_score": 0.5,
+        "criteria": [
+          {
+            "name": "provider grounded",
+            "terms": [
+              "AniList"
+            ],
+            "weight": 0.5
+          },
+          {
+            "name": "reports title/character",
+            "terms": [
+              "Cowboy Bebop",
+              "Spike Spiegel"
+            ],
+            "weight": 0.5
+          }
+        ],
+        "sample_responses": [
+          "AniList lists Cowboy Bebop and names Spike Spiegel among its characters.",
+          "The AniList Cowboy Bebop record includes character Spike Spiegel.",
+          "AniList has a Cowboy Bebop entry with Spike Spiegel character evidence."
+        ]
+      }
+    },
+    {
+      "id": "anime-conversation-25",
+      "scenario_type": "anime",
+      "input": "I saw Cowboy Bebop mentioned; can you check its title and character details?",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-26",
+      "scenario_type": "anime",
+      "input": "What are the status and genre fields for Cowboy Bebop?",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-27",
+      "scenario_type": "anime",
+      "input": "Does the returned record name Spike Spiegel?",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-28",
+      "scenario_type": "anime",
+      "input": "Can you summarize the title and explicit relationship information for Cowboy Bebop?",
+      "expected_skills": [
+        "anilist_relation_exploration"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anime-conversation-29",
+      "scenario_type": "anime",
+      "input": "Please look up Cowboy Bebop and report its character associations.",
+      "expected_skills": [
+        "anime_manga_discovery"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "Cowboy Bebop",
+        "AniList"
+      ],
+      "rubric": {
+        "minimum_score": 0.5,
+        "criteria": [
+          {
+            "name": "provider grounded",
+            "terms": [
+              "AniList"
+            ],
+            "weight": 0.5
+          },
+          {
+            "name": "reports title/character",
+            "terms": [
+              "Cowboy Bebop",
+              "Spike Spiegel"
+            ],
+            "weight": 0.5
+          }
+        ],
+        "sample_responses": [
+          "AniList lists Cowboy Bebop and names Spike Spiegel among its characters.",
+          "The AniList Cowboy Bebop record includes character Spike Spiegel.",
+          "AniList has a Cowboy Bebop entry with Spike Spiegel character evidence."
+        ]
+      }
+    },
+    {
+      "id": "music-empty-search-does-not-invent",
+      "scenario_type": "music_no_result",
+      "input": "Can you find a MusicBrainz artist named No Such Artist?",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists"
+      ],
+      "must_include": [
+        "no artist candidate",
+        "MusicBrainz"
+      ]
+    },
+    {
+      "id": "music-ambiguous-artist-asks-clarification",
+      "scenario_type": "music_ambiguity",
+      "input": "Look up the artist Mercury in MusicBrainz.",
+      "expected_skills": [
+        "music_discovery"
+      ],
+      "expected_tools": [
+        "search_musicbrainz_artists"
+      ],
+      "must_include": [
+        "multiple candidate artists",
+        "Please clarify",
+        "won't guess"
+      ]
+    },
+    {
+      "id": "tv-series-details-cast",
+      "scenario_type": "tv_discovery",
+      "input": "Tell me about Game of Thrones as a TV series.",
+      "expected_skills": [
+        "tv_discovery"
+      ],
+      "expected_tools": [
+        "search_tv",
+        "get_tv_details"
+      ],
+      "must_include": [
+        "Game of Thrones",
+        "2011",
+        "Emilia Clarke"
+      ]
+    },
+    {
+      "id": "actor-filmography-movie-credit",
+      "scenario_type": "actor_filmography",
+      "input": "What are some notable movies in Keanu Reeves' filmography?",
+      "expected_skills": [
+        "actor_filmography"
+      ],
+      "expected_tools": [
+        "search_people",
+        "get_person_combined_credits"
+      ],
+      "must_include": [
+        "The Matrix",
+        "1999"
+      ]
+    },
+    {
+      "id": "anilist-character-appearance",
+      "scenario_type": "anilist_character_exploration",
+      "input": "What appearances does character Spike Spiegel have?",
+      "expected_skills": [
+        "anilist_character_exploration"
+      ],
+      "expected_tools": [
+        "search_anilist_characters",
+        "get_anilist_character_details"
+      ],
+      "must_include": [
+        "Spike Spiegel",
+        "Cowboy Bebop",
+        "AniList"
+      ]
+    },
+    {
+      "id": "anilist-staff-music-credit",
+      "scenario_type": "anilist_staff_exploration",
+      "input": "Can you find Yoko Kanno's composer credits in AniList?",
+      "expected_skills": [
+        "anilist_staff_exploration"
+      ],
+      "expected_tools": [
+        "search_anilist_staff",
+        "get_anilist_staff_details"
+      ],
+      "must_include": [
+        "Yoko Kanno",
+        "Cowboy Bebop",
+        "Music"
+      ]
+    },
+    {
+      "id": "anilist-explicit-relation-skill",
+      "scenario_type": "anilist_relation_exploration",
+      "input": "Does AniList show a relation for Cowboy Bebop?",
+      "expected_skills": [
+        "anilist_relation_exploration"
+      ],
+      "expected_tools": [
+        "search_anilist_media",
+        "get_anilist_media_details"
+      ],
+      "must_include": [
+        "SIDE_STORY",
+        "Knockin' on Heaven's Door"
+      ]
+    },
+    {
+      "id": "lastfm-similar-artist-recommendation",
+      "scenario_type": "music_recommendations",
+      "input": "Recommend similar artists to Portishead using Last.fm.",
+      "expected_skills": [
+        "music_recommendations"
+      ],
+      "expected_tools": [
+        "get_lastfm_recommendations"
+      ],
+      "must_include": [
+        "Broadcast",
+        "Last.fm",
+        "listening data"
+      ]
     }
   ]
 }

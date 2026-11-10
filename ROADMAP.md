@@ -228,6 +228,8 @@ Create an independent evaluation platform, using Popcorn as its first target.
 - [x] Compare current case and check results to a saved report for pass-to-fail regressions.
 - [x] Exercise scripted fake LLM decisions through actual Popcorn orchestration, skills and in-process MCP.
 - [x] Add natural multi-turn movie, cross-domain movie/music and AniList scenarios with deterministic provider fakes.
+- [x] Expand the golden evaluation dataset to 98 varied natural-language scenarios across movie, TV, anime, music, character/staff exploration and recommendations, including ambiguity and no-result cases.
+- [x] Add scripted-model mode for bounded evaluation against the actual MCP tools and configured provider APIs.
 - [ ] Validate live LLM and provider execution with configured credentials.
 
 ### Acceptance criteria

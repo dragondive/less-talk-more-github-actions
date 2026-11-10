@@ -131,13 +131,13 @@ class AniListClient:
         return self._search_entities(CHARACTER_SEARCH_QUERY, "characters", query)
 
     async def character_details(self, identity: int) -> dict[str, Any]:
-        return await self._entity_details(CHARACTER_DETAILS_QUERY, "Character", identity, "character")
+        return self._entity_details(CHARACTER_DETAILS_QUERY, "Character", identity, "character")
 
     async def search_staff(self, query: str) -> list[dict[str, Any]]:
         return self._search_entities(STAFF_SEARCH_QUERY, "staff", query)
 
     async def staff_details(self, identity: int) -> dict[str, Any]:
-        return await self._entity_details(STAFF_DETAILS_QUERY, "Staff", identity, "staff")
+        return self._entity_details(STAFF_DETAILS_QUERY, "Staff", identity, "staff")
 
     def _search_entities(self, query_text: str, key: str, search: str) -> list[dict[str, Any]]:
         data = self._query(query_text, {"search": search})

@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from popcorn.agent import answer
-from popcorn_tasting.fake_agent import run_fake_agent
+from popcorn_tasting.fake_agent import run_fake_agent, run_scripted_live_agent
 
 DEFAULT_RUBRIC = {"criteria": [
     {"name": "action", "terms": ["action"], "weight": 0.4},
@@ -104,7 +104,7 @@ def evaluate_case(case: dict[str, Any], runner: Callable = _run_agent) -> dict[s
 def _coverage(cases: list[dict[str, Any]], results: list[dict[str, Any]]) -> dict[str, Any]:
     expected = Counter()
     for case in cases:
-        for turn in case.get("turns", [{"input": case.get("input", "")} ]):
+        for turn in case.get("turns") or [case]:
             expected.update(("skill", x) for x in turn.get("expected_skills", []))
             expected.update(("mcp_tool", x) for x in turn.get("expected_tools", []))
     observed = Counter()
@@ -137,10 +137,11 @@ def _working_tree_dirty() -> bool | None:
         return None
 
 
-def evaluate_dataset(path: Path, runner: Callable = _run_agent, baseline_path: Path | None = None, commit: str | None = None) -> dict[str, Any]:
+def evaluate_dataset(path: Path, runner: Callable = _run_agent, baseline_path: Path | None = None, commit: str | None = None, case_ids: set[str] | None = None) -> dict[str, Any]:
     dataset = json.loads(path.read_text(encoding="utf-8"))
-    results = [evaluate_case(case, runner) for case in dataset["cases"]]
-    report: dict[str, Any] = {"dataset_version": dataset["version"], "commit": commit or _commit(), "working_tree_dirty": _working_tree_dirty(), "passed": all(r["passed"] for r in results), "coverage": _coverage(dataset["cases"], results), "results": results}
+    cases = [case for case in dataset["cases"] if case_ids is None or case["id"] in case_ids]
+    results = [evaluate_case(case, runner) for case in cases]
+    report: dict[str, Any] = {"dataset_version": dataset["version"], "commit": commit or _commit(), "working_tree_dirty": _working_tree_dirty(), "passed": all(r["passed"] for r in results), "coverage": _coverage(cases, results), "results": results}
     if baseline_path and baseline_path.exists():
         baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
         previous = {r["case_id"]: r for r in baseline.get("results", [])}
@@ -223,10 +224,11 @@ def main() -> int:
     parser.add_argument("--html", type=Path, default=Path("artifacts/index.html"))
     parser.add_argument("--summary", type=Path, help="Write a Markdown summary (defaults to GitHub Actions job summary when available)")
     parser.add_argument("--baseline", type=Path)
-    parser.add_argument("--mode", choices=("fixture", "live"), default="fixture", help="fixture runs offline; live calls the configured Popcorn agent and APIs")
+    parser.add_argument("--mode", choices=("fixture", "mcp", "live"), default="fixture", help="fixture uses fake provider HTTP; mcp uses scripted model decisions with live provider APIs; live uses the configured model and APIs")
+    parser.add_argument("--case-ids", nargs="+", help="Run only these case IDs (useful for bounded live MCP checks)")
     args = parser.parse_args()
-    runner = run_fake_agent if args.mode == "fixture" else _run_agent
-    report = evaluate_dataset(args.dataset, runner=runner, baseline_path=args.baseline)
+    runner = run_fake_agent if args.mode == "fixture" else run_scripted_live_agent if args.mode == "mcp" else _run_agent
+    report = evaluate_dataset(args.dataset, runner=runner, baseline_path=args.baseline, case_ids=set(args.case_ids) if args.case_ids else None)
     report["execution_mode"] = args.mode
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

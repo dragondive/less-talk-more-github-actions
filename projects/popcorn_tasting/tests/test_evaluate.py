@@ -75,7 +75,7 @@ def test_existing_demo_dataset_can_be_exercised_by_runner_adapter():
 
     path = Path(__file__).resolve().parents[1] / "data/golden/demo.json"
     report = evaluate_dataset(path, runner=run_fake_agent)
-    assert len(report["results"]) == 3
+    assert len(report["results"]) == 98
     assert report["passed"]
 
 
@@ -105,8 +105,15 @@ def test_offline_dataset_runs_all_conversational_scenarios_and_reports_trace():
     path = Path(__file__).resolve().parents[1] / "data/golden/demo.json"
     report = evaluate_dataset(path, runner=run_fake_agent, commit="feedface")
     assert report["passed"], report["results"]
-    assert len(report["results"]) == 3
+    assert len(report["results"]) == 98
     assert report["commit"] == "feedface"
-    assert report["coverage"]["skill"]["anime_manga_discovery"]["succeeded"] == 2
+    assert report["coverage"]["skill"]["anime_manga_discovery"]["succeeded"] == 25
     assert "MusicBrainz" in render_html(report)
     assert "provider" in render_html(report)
+
+
+def test_dataset_expansion_has_at_least_80_named_scenarios():
+    path = Path(__file__).resolve().parents[1] / "data/golden/demo.json"
+    dataset = json.loads(path.read_text())
+    assert len(dataset["cases"]) >= 80
+    assert len({case["id"] for case in dataset["cases"]}) == len(dataset["cases"])
