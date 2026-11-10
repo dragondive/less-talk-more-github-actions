@@ -7,8 +7,11 @@ SKILL_NAME = "movie_discovery"
 ToolInvoker = Callable[[str, dict[str, object]], Awaitable[Any]]
 
 
-async def run(title: str, invoke: ToolInvoker, language: str = "en-US") -> str:
-    found = await invoke("search_movies", {"query": title, "language": language})
+async def run(title: str, invoke: ToolInvoker, language: str = "en-US", year: int | None = None) -> str:
+    search_arguments: dict[str, object] = {"query": title, "language": language}
+    if year is not None:
+        search_arguments["year"] = year
+    found = await invoke("search_movies", search_arguments)
     candidates = found.get("results", []) if isinstance(found, dict) else []
     if not candidates:
         return f"I couldn't find a movie matching {title!r} in TMDB."

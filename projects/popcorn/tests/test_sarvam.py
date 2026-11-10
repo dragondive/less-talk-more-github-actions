@@ -29,6 +29,22 @@ def test_chat_completion_sends_tool_call_request_with_api_key():
     assert captured["body"]["reasoning_effort"] == "none"
 
 
+def test_chat_completion_supports_json_response_format_for_judge():
+    captured = {}
+
+    async def run():
+        return await chat_completion(
+            [{"role": "user", "content": "Score this response"}], [],
+            key="test-secret", response_format={"type": "json_object"},
+            get_bytes=lambda _url, body, _headers, _timeout: captured.update(body=json.loads(body)) or b'{"choices": []}',
+        )
+
+    asyncio.run(run())
+    assert captured["body"]["response_format"] == {"type": "json_object"}
+    assert "tools" not in captured["body"]
+    assert "tool_choice" not in captured["body"]
+
+
 def test_chat_completion_sanitizes_authentication_errors():
     def unauthorized(_url, _body, _headers, _timeout):
         raise HTTPError(API_URL, 401, "unauthorized", {}, None)

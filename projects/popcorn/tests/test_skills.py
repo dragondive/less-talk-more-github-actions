@@ -21,6 +21,22 @@ def test_movie_skill_asks_for_clarification_when_search_is_ambiguous():
     assert calls == ["search_movies"]
 
 
+def test_movie_skill_passes_user_supplied_year_to_tmdb_search():
+    calls = []
+
+    async def invoke(tool, arguments):
+        calls.append((tool, arguments))
+        if tool == "search_movies":
+            assert arguments == {"query": "Get Out", "language": "en-US", "year": 2017}
+            return {"results": [{"id": 419430, "title": "Get Out", "release_date": "2017-02-24"}]}
+        return {"title": "Get Out", "release_date": "2017-02-24", "genres": ["Horror"],
+                "cast": [{"name": "Daniel Kaluuya", "character": "Chris"}], "source_url": "tmdb/419430"}
+
+    response = asyncio.run(movie_discovery.run("Get Out", invoke, year=2017))
+    assert "Get Out (2017)" in response
+    assert calls[0][0] == "search_movies"
+
+
 def test_actor_skill_limits_results_to_acting_matches_and_does_not_guess():
     calls = []
 

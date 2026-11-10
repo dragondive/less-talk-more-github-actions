@@ -12,10 +12,34 @@ The JSON report defaults to `artifacts/evaluation.json`. Pass `--html path/to/re
 
 To run with real provider APIs while keeping model decisions scripted, use `--mode mcp`; this invokes Popcorn's real MCP/provider path and may require network access and configured credentials. Use `--case-ids id1 id2` to run a bounded subset. These calls may be subject to provider rate limits. To use Popcorn's configured model too, use `--mode live`; that may call paid model APIs as well as external providers. Results can vary. The case format is shared between these modes, although offline assertions may need adjustment when live provider records differ.
 
+## Live LLM judge demo
+
+The separate **Popcorn Live LLM Judge Demo** workflow is manually triggered from GitHub Actions. It runs one movie scenario three times through the real Sarvam agent, asks a separate Sarvam judge to score each variable response using the Popcorn MCP results as evidence, then repeats with an intentional source-grounding regression and a recovery run. Choose fixed TMDB evidence by default to isolate LLM behavior and keep the comparison repeatable, or choose live TMDB data to also test the external provider. The judge returns criterion scores, short rationales and evidence quotes; the report shows individual responses, per-attempt scores, aggregate scores, pass rates, and baseline score changes. The repeated runs make response variation visible.
+
+Set the repository Actions secret `SARVAM_API_KEY` before dispatching the workflow; `TMDB_ACCESS_TOKEN` is needed only when choosing live TMDB data. Each demo produces multiple answer-generation and judge calls, so it uses paid model API quota. Choosing live TMDB data also makes real provider requests; the fixed evidence option avoids provider outages and makes versions comparable. The default judge model is the same Sarvam model in a separate evaluation call; `SARVAM_JUDGE_MODEL` can select a different Sarvam-supported judge model when the account has access. Results and the baseline/regression/recovery variants are published into the last-ten-run dashboard history.
+
+Run locally from the repository root with the same configured environment. The fixed-provider option keeps the live LLM, Popcorn skill and in-process MCP calls real while holding TMDB evidence constant; omit it to use live TMDB APIs:
+
+```sh
+python -m popcorn_tasting --mode live-judge \
+  --dataset projects/popcorn_tasting/data/golden/live_judge_demo.json \
+  --repetitions 3 --fixture-provider-data --output artifacts/live-baseline.json
+python -m popcorn_tasting --mode live-judge \
+  --dataset projects/popcorn_tasting/data/golden/live_judge_demo.json \
+  --repetitions 3 --fixture-provider-data --inject-regression --baseline artifacts/live-baseline.json \
+  --output artifacts/live-regression.json
+python -m popcorn_tasting --mode live-judge \
+  --dataset projects/popcorn_tasting/data/golden/live_judge_demo.json \
+  --repetitions 3 --fixture-provider-data --baseline artifacts/live-regression.json \
+  --output artifacts/live-recovery.json
+```
+
+The regression option temporarily removes the agent's available tool catalog and tells it to answer from memory. This models a source-grounding regression. The real LLM still generates the response and the LLM judge still evaluates it. The evaluator also checks expected skill/tool execution, so missing provider evidence is visible separately from the semantic score. The demo is deliberately opt-in; ordinary CI remains offline.
+
 Use `--baseline path/to/evaluation.json` to compare against an explicitly selected saved report. Pass-to-fail case and individual check changes are reported.
 
 ## Case format
 
-Cases use natural-language conversation `turns`. A turn can assert expected skills and MCP tools, required factual phrases, context history, or a weighted keyword rubric with sample prose variants. Cases can assert skill sequences. Reports separate attempted/succeeded/failed invocation counts; expected-but-omitted and unexpected invocations are visible in coverage. Rubrics use transparent weighted phrase matching, not semantic interpretation or an LLM judge.
+Cases use natural-language conversation `turns`. A turn can assert expected skills and MCP tools, required factual phrases, context history, or a weighted keyword rubric with sample prose variants. Cases can assert skill sequences. Live judge cases use an `llm_judge` rubric with criterion descriptions, weights, minimum score, and minimum pass rate. Reports separate attempted/succeeded/failed invocation counts; expected-but-omitted and unexpected invocations are visible in coverage. Offline keyword rubrics remain transparent phrase checks; the opt-in live judge mode evaluates semantics against the observed MCP evidence.
 
 Offline mode demonstrates actual orchestration, MCP-path execution and provider adapter request parsing with deterministic fakes; it does not measure model quality or live provider behavior. The `mcp` mode provides real-provider evidence using scripted model choices. The Render-hosted `/tests` dashboard is the interactive overview and drill-down; GitHub Actions retains the concise run summary and detailed JSON artifact. Each CI evaluation run is also added to a rolling history of ten reports for selectable comparisons.

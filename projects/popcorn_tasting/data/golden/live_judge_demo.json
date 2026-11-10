@@ -1,0 +1,37 @@
+{
+  "version": "sarvam-live-judge-1",
+  "minimum_regression_drop": 0.6,
+  "cases": [
+    {
+      "id": "live-get-out-grounded-summary",
+      "turns": [
+        {
+          "input": "Tell me about the 2017 movie Get Out: when was it released, what genre is it, and name one cast member. Keep it concise and cite the source.",
+          "expected_skills": ["movie_discovery"],
+          "expected_tools": ["search_movies", "get_movie_details"],
+          "llm_judge": {
+            "minimum_score": 4.0,
+            "minimum_pass_rate": 0.67,
+            "criteria": [
+              {
+                "name": "evidence_grounding",
+                "weight": 0.4,
+                "description": "Factual claims about release date, genre and cast are supported by the supplied TMDB MCP results. The answer cites or links the TMDB source. Penalize invented details and claims presented as verified without trace evidence."
+              },
+              {
+                "name": "requested_completeness",
+                "weight": 0.4,
+                "description": "The response answers all three requested parts: release timing, genre, and at least one cast member. Score partial answers lower even when their included facts are accurate."
+              },
+              {
+                "name": "clarity_and_concision",
+                "weight": 0.2,
+                "description": "The response is concise, clear, directly answers the question, and distinguishes provider facts from interpretation."
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

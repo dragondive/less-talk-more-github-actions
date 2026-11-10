@@ -72,6 +72,7 @@ async def chat_completion(
     *,
     key: str | None = None,
     model: str | None = None,
+    response_format: dict[str, Any] | None = None,
     timeout: float = 45,
     get_bytes: Callable[[str, bytes, dict[str, str], float], bytes] | None = None,
 ) -> dict[str, Any]:
@@ -79,11 +80,14 @@ async def chat_completion(
     payload: dict[str, Any] = {
         "model": model or model_name(),
         "messages": messages,
-        "tools": tools,
-        "tool_choice": "auto",
         "max_tokens": 800,
         "reasoning_effort": "none",
     }
+    if tools:
+        payload["tools"] = tools
+        payload["tool_choice"] = "auto"
+    if response_format is not None:
+        payload["response_format"] = response_format
     return _post_json(
         payload,
         key if key is not None else api_key(),

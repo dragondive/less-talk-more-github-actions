@@ -24,6 +24,9 @@ Use AniList filters for broad anime/manga recommendations; use the character and
 For movie or TV facts, cast, people credits, discovery, related titles, collections,
 and watch availability, use a Popcorn tool. Use TMDB reference data for language,
 country, and genre codes. Watch-provider answers must credit JustWatch via TMDB.
+When a user specifies a movie release year, pass it as the movie_discovery year
+argument to narrow the TMDB search. If a provider lookup fails, say that it failed
+and do not replace missing sourced facts with general knowledge.
 Never invent TMDB
 facts or claim to have checked TMDB unless a tool result supports it. If a tool
 returns candidate choices, ask the user to choose; do not guess. For taste, genre-fit,
@@ -54,7 +57,7 @@ LLM_TOOLS = [
             "description": "Search TMDB for a movie, then return its details and credited cast. Use this for movie information, cast, or a movie-based suitability/review question.",
             "parameters": {
                 "type": "object",
-                "properties": {"title": {"type": "string", "description": "Movie title as stated by the user."}, "language": {"type": "string", "description": "TMDB display language code such as en-US or hi-IN."}},
+                "properties": {"title": {"type": "string", "description": "Movie title as stated by the user."}, "year": {"type": "integer", "minimum": 1870, "maximum": 2100, "description": "Release year if the user supplied one; use it to disambiguate the movie."}, "language": {"type": "string", "description": "TMDB display language code such as en-US or hi-IN."}},
                 "required": ["title"],
                 "additionalProperties": False,
             },
@@ -235,6 +238,7 @@ async def _invoke_skill(
     parent_id: str,
     language: str = "en-US",
     media: str = "all",
+    year: int | None = None,
 ) -> str:
     skill_event = trace.record("skill.invoke", parent_id=parent_id, skill=skill_name)
 
@@ -242,7 +246,7 @@ async def _invoke_skill(
         return await _call_tool(tool, arguments, trace, skill_event.event_id)
 
     if skill_name == movie_discovery.SKILL_NAME:
-        return await movie_discovery.run(query, invoke, language)
+        return await movie_discovery.run(query, invoke, language, year)
     if skill_name == tv_discovery.SKILL_NAME:
         return await tv_discovery.run(query, invoke, language)
     if skill_name == anime_manga_discovery.SKILL_NAME:
@@ -388,6 +392,10 @@ async def _run_model_tool(
 
     if name == "movie_discovery":
         query, skill_name = arguments.get("title"), movie_discovery.SKILL_NAME
+        year = arguments.get("year")
+        if year is not None and (isinstance(year, bool) or not isinstance(year, int) or not 1870 <= year <= 2100):
+            event.status = "error"
+            return "Provide a release year between 1870 and 2100."
     elif name == "actor_filmography":
         query, skill_name = arguments.get("person_name"), actor_filmography.SKILL_NAME
     elif name == "tv_discovery":
@@ -482,7 +490,8 @@ async def _run_model_tool(
         media = arguments.get("media", media if skill_name in {anime_manga_discovery.SKILL_NAME, anilist_relation_exploration.SKILL_NAME} else "all")
         if skill_name not in {anime_manga_discovery.SKILL_NAME, anilist_relation_exploration.SKILL_NAME} and media not in {"movie", "tv", "all"}:
             return "Choose movie, tv, or all person credits."
-        return await _invoke_skill(skill_name, query.strip(), trace, parent_id, language, media)
+        return await _invoke_skill(skill_name, query.strip(), trace, parent_id, language, media,
+                                   year if skill_name == movie_discovery.SKILL_NAME else None)
     except Exception as error:
         event.status = "error"
         return f"The lookup failed: {error}"

@@ -77,6 +77,7 @@ Create the smallest runnable agent foundation.
 - [x] Add Gemini as a selectable LLM provider while retaining DeepSeek.
 - [x] Add Sarvam as the selected model provider while retaining Gemini and DeepSeek.
 - [ ] Configure the Sarvam API key on Render and validate live model-to-skill-to-MCP flow.
+- [x] Add an opt-in Sarvam live answer and LLM judge baseline/regression/recovery demonstration.
 
 ---
 
@@ -312,4 +313,4 @@ Do not add these to the initial Popcorn milestone without an explicit decision:
 
 ## Current next action
 
-Configure `SARVAM_API_KEY` on the deployed Render service, then validate the deployed Sarvam-to-skill-to-MCP flow. A local live call to Sarvam and TMDB succeeded; the deployed service still needs its key set. DeepSeek and Gemini remain selectable alternatives.
+Configure `SARVAM_API_KEY` on the deployed Render service, then validate the deployed Sarvam-to-skill-to-MCP flow. Trigger the opt-in live LLM judge workflow after configuring the `SARVAM_API_KEY` and `TMDB_ACCESS_TOKEN` GitHub Actions secrets. DeepSeek and Gemini remain selectable alternatives.

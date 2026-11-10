@@ -89,6 +89,8 @@ Copy the service's Deploy Hook URL from Render's Settings and add it to the GitH
 
 After deployment, open `/tests` on the same Render app to browse the Popcorn Tasting dashboard. It compares the latest run with the previous run by default and lets you select any of the latest ten runs. GitHub Actions stores the bounded, compressed report history on its `eval-history` branch because the free Render service has ephemeral storage. The app serves that data through its own `/api/tests/runs` endpoints. Each report contains synthetic evaluation prompts and sanitized traces; it must not be used to publish private prompts or customer data.
 
+To demonstrate variable-output regression evaluation, manually run the **Popcorn Live LLM Judge Demo** workflow. It sends repeated live Sarvam answers through a semantic judge, compares a normal baseline with an intentional source-grounding regression, then runs a recovery version. Configure `SARVAM_API_KEY` as a GitHub Actions secret. Choose fixed TMDB evidence to isolate LLM quality, or configure `TMDB_ACCESS_TOKEN` and choose live TMDB data. This opt-in workflow uses paid Sarvam calls and publishes its three reports to `/tests` history. See the [Popcorn Tasting live judge instructions](projects/popcorn_tasting/README.md#live-llm-judge-demo) for the rubric, cost boundary, and local commands.
+
 ## Repository layout
 
 ```text

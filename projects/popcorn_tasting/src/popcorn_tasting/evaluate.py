@@ -15,6 +15,7 @@ from urllib.parse import urlsplit
 
 from popcorn.agent import answer
 from popcorn_tasting.fake_agent import run_fake_agent, run_scripted_live_agent
+from popcorn_tasting.llm_judge import JudgeError, judge_response
 
 DEFAULT_RUBRIC = {"criteria": [
     {"name": "action", "terms": ["action"], "weight": 0.4},
@@ -100,6 +101,197 @@ def evaluate_case(case: dict[str, Any], runner: Callable = _run_agent) -> dict[s
     return {"case_id": case["id"], "output_evaluation": "deterministic + rubric" if any("rubric" in turn for turn in turns) else "deterministic checks", "turns": turn_results, "passed": all(t["passed"] for t in turn_results) and all(c["passed"] for c in checks), "checks": checks,
             "events": all_events,
             "invocations": [{"kind": "skill" if e.get("name") == "skill.invoke" else "mcp_tool" if e.get("name") == "mcp.tool.call" else "provider_api", "name": e.get("attributes", {}).get("skill") if e.get("name") == "skill.invoke" else e.get("attributes", {}).get("tool") if e.get("name") == "mcp.tool.call" else f"{e.get('attributes', {}).get('provider')} {e.get('attributes', {}).get('method')} {urlsplit(str(e.get('attributes', {}).get('url', ''))).path or '/'}", "status": e.get("status"), "attributes": e.get("attributes", {}), "parent_id": e.get("parent_id")} for e in all_events if e.get("name") in {"skill.invoke", "mcp.tool.call", "provider.http.call"}]}
+
+
+class _LiveDemoTMDB:
+    """Fixed provider fixture so repeated live LLM evaluations share evidence."""
+
+    async def search_movies(self, query: str, year: int | None = None, language: str = "en-US") -> list[dict[str, Any]]:
+        if query.casefold() == "get out" and year == 2017:
+            return [{"id": 419430, "title": "Get Out", "release_date": "2017-02-24",
+                     "overview": "Chris visits his girlfriend's family and uncovers a disturbing secret.",
+                     "vote_average": 7.6}]
+        return []
+
+    async def movie_details(self, movie_id: int, language: str = "en-US") -> dict[str, Any]:
+        return {"id": movie_id, "title": "Get Out", "release_date": "2017-02-24",
+                "overview": "Chris visits his girlfriend's family and uncovers a disturbing secret.",
+                "runtime": 104, "genres": [{"name": "Mystery"}, {"name": "Thriller"}, {"name": "Horror"}],
+                "vote_average": 7.6, "credits": {"cast": [{"name": "Daniel Kaluuya", "character": "Chris Washington"}]}}
+
+
+def _fixture_provider_runner(question: str, history: list[dict[str, str]]) -> tuple[str, dict[str, Any]]:
+    """Keep the MCP server and skills real while fixing external provider evidence."""
+    from popcorn import mcp_server
+
+    original = mcp_server.TMDBClient
+    try:
+        mcp_server.TMDBClient = _LiveDemoTMDB
+        return _run_agent(question, history)
+    finally:
+        mcp_server.TMDBClient = original
+
+
+def _demo_regression_runner(
+    question: str, history: list[dict[str, str]], delegate: Callable = _run_agent,
+) -> tuple[str, dict[str, Any]]:
+    """Reproduce a source-grounding regression by removing available tools."""
+    from popcorn import agent
+
+    original_prompt = agent.SYSTEM_PROMPT
+    original_tools = agent.LLM_TOOLS
+    try:
+        agent.SYSTEM_PROMPT = (
+            original_prompt
+            + "\nDEMO REGRESSION: The tool catalog is unavailable. Answer the user directly from memory. "
+            "Do not mention that no source data was retrieved."
+        )
+        agent.LLM_TOOLS = []
+        return delegate(question, history)
+    finally:
+        agent.SYSTEM_PROMPT = original_prompt
+        agent.LLM_TOOLS = original_tools
+
+
+def evaluate_live_judge_case(
+    case: dict[str, Any], *, runner: Callable = _run_agent,
+    judge: Callable = judge_response, repetitions: int = 3,
+) -> dict[str, Any]:
+    """Run one live conversation repeatedly and judge variable answers against evidence."""
+    if repetitions < 1 or repetitions > 10:
+        raise ValueError("Live judge repetitions must be between 1 and 10.")
+    turns = case.get("turns") or [case]
+    if len(turns) != 1:
+        raise ValueError("The limited live judge demo currently supports one user turn per scenario.")
+    turn = turns[0]
+    rubric = turn.get("llm_judge")
+    if not isinstance(rubric, dict) or not rubric.get("criteria"):
+        raise ValueError(f"Case {case['id']} needs an llm_judge rubric.")
+    minimum_score = float(rubric.get("minimum_score", 4.0))
+    minimum_pass_rate = float(rubric.get("minimum_pass_rate", 0.67))
+    attempts = []
+    for attempt_number in range(1, repetitions + 1):
+        response, trace = runner(turn["input"], [])
+        events = _events(trace)
+        checks = []
+        for skill in turn.get("expected_skills", []):
+            ok = any(e.get("name") == "skill.invoke" and e.get("attributes", {}).get("skill") == skill
+                     and e.get("status") == "ok" for e in events)
+            checks.append({"name": f"skill:{skill}", "passed": ok})
+        for tool in turn.get("expected_tools", []):
+            matching = [e for e in events if e.get("name") == "mcp.tool.call" and e.get("attributes", {}).get("tool") == tool]
+            ok = bool(matching) and all(e.get("status") == "ok" for e in matching)
+            checks.append({"name": f"mcp_tool:{tool}", "passed": ok})
+        try:
+            judgement = judge(question=turn["input"], response=response, trace=trace, rubric=rubric)
+            judgement["passed"] = judgement["score"] >= minimum_score
+            judgement["minimum_score"] = minimum_score
+        except Exception as error:
+            judgement = {"error": str(error)[:600], "passed": False, "minimum_score": minimum_score}
+        checks.append({"name": "llm_judge_minimum", "passed": judgement.get("passed", False),
+                       "score": judgement.get("score"), "minimum": minimum_score})
+        attempts.append({
+            "attempt_number": attempt_number,
+            "input": turn["input"],
+            "response": response,
+            "trace": trace,
+            "events": events,
+            "checks": checks,
+            "llm_judge": judgement,
+            "passed": all(check["passed"] for check in checks),
+            "invocations": [
+                {"kind": "skill" if e.get("name") == "skill.invoke" else "mcp_tool" if e.get("name") == "mcp.tool.call" else "provider_api",
+                 "name": e.get("attributes", {}).get("skill") if e.get("name") == "skill.invoke" else e.get("attributes", {}).get("tool") if e.get("name") == "mcp.tool.call" else f"{e.get('attributes', {}).get('provider')} {e.get('attributes', {}).get('method')} {urlsplit(str(e.get('attributes', {}).get('url', ''))).path or '/' }",
+                 "status": e.get("status"), "attributes": e.get("attributes", {}), "parent_id": e.get("parent_id")}
+                for e in events if e.get("name") in {"skill.invoke", "mcp.tool.call", "provider.http.call"}
+            ],
+        })
+    passed_attempts = sum(attempt["passed"] for attempt in attempts)
+    pass_rate = passed_attempts / repetitions
+    valid_judgements = [attempt["llm_judge"] for attempt in attempts if isinstance(attempt["llm_judge"].get("score"), (int, float))]
+    mean_score = sum(item["score"] for item in valid_judgements) / len(valid_judgements) if valid_judgements else 0.0
+    criterion_scores: dict[str, list[float]] = {}
+    for item in valid_judgements:
+        for criterion in item.get("criteria", []):
+            criterion_scores.setdefault(criterion["name"], []).append(float(criterion["score"]))
+    summary = {
+        "score": round(mean_score, 2),
+        "attempt_pass_rate": round(pass_rate, 3),
+        "judge_pass_rate": round(sum(bool(item.get("passed")) for item in valid_judgements) / repetitions, 3),
+        "passed_attempts": passed_attempts,
+        "repetitions": repetitions,
+        "minimum_score": minimum_score,
+        "minimum_pass_rate": minimum_pass_rate,
+        "criteria": {name: round(sum(values) / len(values), 2) for name, values in criterion_scores.items()},
+    }
+    checks = []
+    for check_name in sorted({check["name"] for attempt in attempts for check in attempt["checks"]}):
+        check_values = [next(check["passed"] for check in attempt["checks"] if check["name"] == check_name)
+                        for attempt in attempts]
+        checks.append({"name": check_name, "passed": all(check_values),
+                       "passed_attempts": sum(check_values), "repetitions": repetitions})
+    return {
+        "case_id": case["id"],
+        "output_evaluation": "Sarvam live response + LLM judge",
+        "judge_summary": summary,
+        "turns": attempts,
+        "checks": checks,
+        "events": [event for attempt in attempts for event in attempt["events"]],
+        "invocations": [call for attempt in attempts for call in attempt["invocations"]],
+        "passed": pass_rate >= minimum_pass_rate and all(check["passed"] for check in checks if not check["name"].startswith("llm_judge_")),
+    }
+
+
+def evaluate_live_judge_dataset(
+    path: Path, *, repetitions: int = 3, baseline_path: Path | None = None,
+    commit: str | None = None, case_ids: set[str] | None = None,
+    inject_regression: bool = False, fixture_provider_data: bool = False,
+    runner: Callable | None = None,
+    judge: Callable = judge_response,
+) -> dict[str, Any]:
+    dataset = json.loads(path.read_text(encoding="utf-8"))
+    cases = [case for case in dataset["cases"] if case_ids is None or case["id"] in case_ids]
+    base_runner = runner or (_fixture_provider_runner if fixture_provider_data else _run_agent)
+    selected_runner = (
+        (lambda question, history: _demo_regression_runner(question, history, base_runner))
+        if inject_regression else base_runner
+    )
+    results = [evaluate_live_judge_case(case, runner=selected_runner, judge=judge, repetitions=repetitions)
+               for case in cases]
+    report: dict[str, Any] = {
+        "dataset_version": dataset["version"],
+        "commit": commit or _commit(),
+        "working_tree_dirty": _working_tree_dirty(),
+        "passed": all(result["passed"] for result in results),
+        "coverage": _coverage(cases, results),
+        "results": results,
+        "execution_mode": "live-judge",
+        "llm_judge": {"provider": "Sarvam", "model": os.getenv("SARVAM_JUDGE_MODEL", "").strip() or os.getenv("SARVAM_MODEL", "sarvam-105b"),
+                      "repetitions": repetitions},
+        "demo_variant": "intentional-regression" if inject_regression else "normal",
+        "external_provider_mode": "deterministic TMDB evidence fixture" if fixture_provider_data else "live provider APIs",
+    }
+    if baseline_path and baseline_path.exists():
+        baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+        previous = {result["case_id"]: result for result in baseline.get("results", [])}
+        score_regressions = []
+        for result in results:
+            old = previous.get(result["case_id"])
+            if not old or not isinstance(old.get("judge_summary"), dict):
+                continue
+            old_score = old["judge_summary"].get("score")
+            new_score = result["judge_summary"]["score"]
+            if isinstance(old_score, (int, float)):
+                delta = round(new_score - old_score, 2)
+                result["judge_summary"]["baseline_score"] = old_score
+                result["judge_summary"]["score_delta"] = delta
+                threshold = float(dataset.get("minimum_regression_drop", 0.6))
+                if delta <= -threshold:
+                    score_regressions.append({"case_id": result["case_id"], "baseline_score": old_score,
+                                              "current_score": new_score, "drop": round(-delta, 2), "threshold": threshold})
+        report["judge_score_regressions"] = score_regressions
+        report["passed"] &= not score_regressions
+    return report
 
 
 def _coverage(cases: list[dict[str, Any]], results: list[dict[str, Any]]) -> dict[str, Any]:
@@ -209,11 +401,34 @@ def evaluate_dataset(path: Path, runner: Callable = _run_agent, baseline_path: P
 def render_html(report: dict[str, Any]) -> str:
     rows = []
     for case in report["results"]:
-        turns = "".join(f"<h4>Input</h4><pre>{html.escape(t['input'])}</pre><h4>Outcome</h4><pre>{html.escape(t['response'])}</pre><ul>{''.join(f'<li>{"PASS" if check["passed"] else "FAIL"}: {html.escape(check["name"])}</li>' for check in t['checks'])}</ul>" for t in case["turns"])
+        rendered_attempts = []
+        for item in case["turns"]:
+            title = f"Attempt {item['attempt_number']}" if item.get("attempt_number") else "Input"
+            judge = item.get("llm_judge")
+            judge_html = ""
+            if judge:
+                judge_html = (f"<h4>LLM judge · score {html.escape(str(judge.get('score', 'error')))}/5</h4>"
+                              f"<pre>{html.escape(json.dumps(judge, indent=2))}</pre>")
+            checks = "".join(f"<li>{'PASS' if check['passed'] else 'FAIL'}: {html.escape(check['name'])}</li>" for check in item["checks"])
+            rendered_attempts.append(
+                f"<h4>{html.escape(title)}</h4><pre>{html.escape(item['input'])}</pre>"
+                f"<h4>Outcome</h4><pre>{html.escape(item['response'])}</pre>{judge_html}<ul>{checks}</ul>"
+            )
+        aggregate = case.get("judge_summary")
+        aggregate_html = (f"<h4>Judge aggregate</h4><pre>{html.escape(json.dumps(aggregate, indent=2))}</pre>" if aggregate else "")
         details = html.escape(json.dumps(case["events"], indent=2))
-        rows.append(f"<details><summary>{html.escape(case['case_id'])}: {'PASS' if case['passed'] else 'FAIL'} · {html.escape(case['output_evaluation'])}</summary>{turns}<h4>Execution trace (ordered; event IDs and parent IDs)</h4><pre>{details}</pre></details>")
+        rows.append(
+            f"<details><summary>{html.escape(case['case_id'])}: {'PASS' if case['passed'] else 'FAIL'} · "
+            f"{html.escape(case['output_evaluation'])}</summary>{aggregate_html}{''.join(rendered_attempts)}"
+            f"<h4>Execution trace (ordered; event IDs and parent IDs)</h4><pre>{details}</pre></details>"
+        )
     coverage = html.escape(json.dumps(report["coverage"], indent=2))
-    return f"<!doctype html><meta charset='utf-8'><title>Popcorn Tasting</title><style>body{{font:16px system-ui;max-width:1100px;margin:2rem auto}}pre{{white-space:pre-wrap;background:#f3f3f3;padding:1rem}}details{{border:1px solid #ccc;padding:1rem;margin:1rem 0}}</style><h1>Popcorn Tasting {'PASS' if report['passed'] else 'FAIL'}</h1><p>Commit: <code>{html.escape(str(report.get('commit') or 'unknown'))}</code> · Working tree dirty: {html.escape(str(report.get('working_tree_dirty')))} · Dataset: {html.escape(str(report['dataset_version']))}</p><h2>Cases</h2>{''.join(rows)}<h2>Coverage</h2><pre>{coverage}</pre>"
+    return (f"<!doctype html><meta charset='utf-8'><title>Popcorn Tasting</title><style>body{{font:16px system-ui;max-width:1100px;margin:2rem auto}}"
+            f"pre{{white-space:pre-wrap;background:#f3f3f3;padding:1rem}}details{{border:1px solid #ccc;padding:1rem;margin:1rem 0}}</style>"
+            f"<h1>Popcorn Tasting {'PASS' if report['passed'] else 'FAIL'}</h1><p>Commit: "
+            f"<code>{html.escape(str(report.get('commit') or 'unknown'))}</code> · Working tree dirty: "
+            f"{html.escape(str(report.get('working_tree_dirty')))} · Dataset: {html.escape(str(report['dataset_version']))}</p>"
+            f"<h2>Cases</h2>{''.join(rows)}<h2>Coverage</h2><pre>{coverage}</pre>")
 
 
 def _md(value: object) -> str:
@@ -225,18 +440,24 @@ def render_markdown(report: dict[str, Any]) -> str:
     passed = sum(bool(case["passed"]) for case in report["results"])
     total = len(report["results"])
     lines = [
-        f"## Popcorn Tasting: {'✅ PASS' if report['passed'] else '❌ FAIL'}",
-        "",
-        f"**Commit:** `{_md(report.get('commit') or 'unknown')}` · **Working tree dirty:** `{_md(report.get('working_tree_dirty'))}` · **Dataset:** `{_md(report['dataset_version'])}` · **Cases:** {passed}/{total} passed · **Mode:** `{_md(report.get('execution_mode', 'fixture'))}`",
-        "",
-        "### Test outcomes",
-        "",
-        "| Test | Output evaluation | Status | Input → outcome |",
-        "|---|---|---:|---|",
+        f"## Popcorn Tasting: {'✅ PASS' if report['passed'] else '❌ FAIL'}", "",
+        f"**Commit:** `{_md(report.get('commit') or 'unknown')}` · **Working tree dirty:** `{_md(report.get('working_tree_dirty'))}` · **Dataset:** `{_md(report['dataset_version'])}` · **Cases:** {passed}/{total} passed · **Mode:** `{_md(report.get('execution_mode', 'fixture'))}`", "",
+        "### Test outcomes", "", "| Test | Output evaluation | Status | Input → outcome |", "|---|---|---:|---|",
     ]
     for case in report["results"]:
-        transcript = "<br>".join(f"**Input:** {_md(turn['input'])}<br>**Outcome:** {_md(turn['response'])}<br>**Checks:** {sum(bool(c['passed']) for c in turn['checks'])}/{len(turn['checks'])} passed" for turn in case["turns"])
-        lines.append(f"| {_md(case['case_id'])} | {_md(case['output_evaluation'])} | {'✅ PASS' if case['passed'] else '❌ FAIL'} | {transcript} |")
+        transcripts = []
+        for item in case["turns"]:
+            label = f"Attempt {item['attempt_number']}" if item.get("attempt_number") else "Input"
+            transcript = (f"**{label}:** {_md(item['input'])}<br>**Outcome:** {_md(item['response'])}"
+                          f"<br>**Checks:** {sum(bool(c['passed']) for c in item['checks'])}/{len(item['checks'])} passed")
+            if item.get("llm_judge"):
+                judgement = item["llm_judge"]
+                transcript += f"<br>**LLM judge:** {judgement.get('score', 'error')}/5 · {_md(judgement.get('rationale', judgement.get('error', '')))}"
+            transcripts.append(transcript)
+        if case.get("judge_summary"):
+            summary = case["judge_summary"]
+            transcripts.append(f"**Judge mean:** {summary['score']}/5 · {summary['judge_pass_rate']:.0%} judged pass rate · criteria `{_md(summary['criteria'])}`")
+        lines.append(f"| {_md(case['case_id'])} | {_md(case['output_evaluation'])} | {'✅ PASS' if case['passed'] else '❌ FAIL'} | {'<br>'.join(transcripts)} |")
     lines += ["", "### Skill, MCP, and provider paths", "", "| Type | Skill / tool / path | Expected | Attempted | Succeeded | Failed | Coverage / success rate |", "|---|---|---:|---:|---:|---:|---:|"]
     for kind, entries in report["coverage"].items():
         for name, counts in entries.items():
@@ -247,17 +468,24 @@ def render_markdown(report: dict[str, Any]) -> str:
                 rate = round(100 * counts["succeeded"] / counts["attempted"]) if counts["attempted"] else 0
                 coverage = f"{rate}% success"
             else:
-                expected = counts["expected"]
-                coverage = f"{counts['percent']}%"
+                expected, coverage = counts["expected"], f"{counts['percent']}%"
             lines.append(f"| {label} | {_md(name)}{note} | {expected} | {counts['attempted']} | {counts['succeeded']} | {counts['failed']} | {coverage} |")
     deterministic = sum(case["output_evaluation"] == "deterministic checks" for case in report["results"])
     rubric = sum(case["output_evaluation"] == "deterministic + rubric" for case in report["results"])
-    lines += ["", "### Output evaluation mix", "", f"- Deterministic checks: {deterministic} case(s)", f"- Deterministic checks plus variable-output rubric: {rubric} case(s)", "- Rubrics use transparent weighted keyword checks and sample response variants; they are not an LLM judge."]
+    judge_cases = sum(case["output_evaluation"] == "Sarvam live response + LLM judge" for case in report["results"])
+    lines += ["", "### Output evaluation mix", "", f"- Deterministic checks: {deterministic} case(s)", f"- Deterministic checks plus variable-output rubric: {rubric} case(s)", f"- Live Sarvam answers scored by an LLM judge: {judge_cases} case(s)"]
     if "regressions" in report:
         lines += ["", "### Baseline regressions", "", "None detected." if not report["regressions"] else ", ".join(f"`{_md(case_id)}`" for case_id in report["regressions"])]
         if report.get("check_regressions"):
             lines += ["", "Check-level pass-to-fail changes:", ""]
             lines += [f"- `{_md(item['case_id'])}` · `{_md(item['check'])}`" for item in report["check_regressions"]]
+    if report.get("judge_score_regressions") is not None:
+        lines += ["", "### LLM judge score changes", ""]
+        regressions = report["judge_score_regressions"]
+        if not regressions:
+            lines.append("No material score regression detected.")
+        else:
+            lines += [f"- `{_md(item['case_id'])}` · {item['baseline_score']}/5 → {item['current_score']}/5 (drop {item['drop']}; threshold {item['threshold']})" for item in regressions]
     return "\n".join(lines) + "\n"
 
 
@@ -269,12 +497,28 @@ def main() -> int:
     parser.add_argument("--html", type=Path, help="Optionally write a standalone HTML report")
     parser.add_argument("--summary", type=Path, help="Write a Markdown summary (defaults to GitHub Actions job summary when available)")
     parser.add_argument("--baseline", type=Path)
-    parser.add_argument("--mode", choices=("fixture", "mcp", "live"), default="fixture", help="fixture uses fake provider HTTP; mcp uses scripted model decisions with live provider APIs; live uses the configured model and APIs")
-    parser.add_argument("--case-ids", nargs="+", help="Run only these case IDs (useful for bounded live MCP checks)")
+    parser.add_argument("--mode", choices=("fixture", "mcp", "live", "live-judge"), default="fixture", help="fixture uses fake provider HTTP; mcp uses scripted model decisions with live provider APIs; live uses the configured model and APIs; live-judge repeats live scenarios and scores them with Sarvam as judge")
+    parser.add_argument("--case-ids", nargs="+", help="Run only these case IDs (useful for bounded live checks)")
+    parser.add_argument("--repetitions", type=int, default=3, help="Live-judge attempts per scenario (1–10; default 3)")
+    parser.add_argument("--inject-regression", action="store_true", help="Demo-only: tell the live agent to skip tools and answer from memory")
+    parser.add_argument("--fixture-provider-data", action="store_true", help="Use a fixed TMDB response while keeping the live LLM, Popcorn skill and in-process MCP server real")
     args = parser.parse_args()
-    runner = run_fake_agent if args.mode == "fixture" else run_scripted_live_agent if args.mode == "mcp" else _run_agent
-    report = evaluate_dataset(args.dataset, runner=runner, baseline_path=args.baseline, case_ids=set(args.case_ids) if args.case_ids else None)
-    report["execution_mode"] = args.mode
+    selected_case_ids = set(args.case_ids) if args.case_ids else None
+    if args.mode == "live-judge":
+        report = evaluate_live_judge_dataset(
+            args.dataset,
+            repetitions=args.repetitions,
+            baseline_path=args.baseline,
+            case_ids=selected_case_ids,
+            inject_regression=args.inject_regression,
+            fixture_provider_data=args.fixture_provider_data,
+        )
+    else:
+        if args.inject_regression:
+            parser.error("--inject-regression requires --mode live-judge")
+        runner = run_fake_agent if args.mode == "fixture" else run_scripted_live_agent if args.mode == "mcp" else _run_agent
+        report = evaluate_dataset(args.dataset, runner=runner, baseline_path=args.baseline, case_ids=selected_case_ids)
+        report["execution_mode"] = args.mode
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     if args.html:

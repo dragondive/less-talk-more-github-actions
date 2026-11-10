@@ -1,7 +1,8 @@
+import asyncio
 import json
 from pathlib import Path
 
-from popcorn_tasting.evaluate import evaluate_case, evaluate_dataset, render_html, render_markdown, score_rubric
+from popcorn_tasting.evaluate import evaluate_case, evaluate_dataset, evaluate_live_judge_case, evaluate_live_judge_dataset, render_html, render_markdown, score_rubric
 
 
 def fake_runner(question, history):
@@ -122,6 +123,28 @@ def test_dataset_expansion_has_at_least_80_named_scenarios():
     assert len({case["id"] for case in dataset["cases"]}) == len(dataset["cases"])
 
 
+def test_demo_regression_removes_tool_catalog_and_restores_agent_configuration():
+    from popcorn import agent
+    from popcorn_tasting.evaluate import _demo_regression_runner
+
+    original_prompt = agent.SYSTEM_PROMPT
+    original_tools = agent.LLM_TOOLS
+    observed = {}
+
+    def delegate(question, history):
+        observed["prompt"] = agent.SYSTEM_PROMPT
+        observed["tools"] = agent.LLM_TOOLS
+        return "ungrounded answer", {"events": []}
+
+    response, _ = _demo_regression_runner("question", [], delegate)
+
+    assert response == "ungrounded answer"
+    assert observed["tools"] == []
+    assert "answer the user directly from memory" in observed["prompt"].casefold()
+    assert agent.SYSTEM_PROMPT == original_prompt
+    assert agent.LLM_TOOLS is original_tools
+
+
 def test_provider_endpoint_coverage_uses_http_events():
     def runner(question, history):
         return "ok", {"events": [
@@ -131,3 +154,82 @@ def test_provider_endpoint_coverage_uses_http_events():
     report = evaluate_dataset(Path(__file__).parents[1] / "data/golden/demo.json", runner=runner,
                               case_ids={"matrix-context-follow-up"})
     assert report["coverage"]["provider_api"]["TMDB GET /3/search/movie"]["succeeded"] == 2
+
+
+def test_live_judge_repeats_real_runner_and_aggregates_variable_responses():
+    path = Path(__file__).resolve().parents[1] / "data/golden/live_judge_demo.json"
+    dataset = json.loads(path.read_text())
+    case = dataset["cases"][0]
+    count = 0
+
+    def runner(question, _history):
+        nonlocal count
+        count += 1
+        events = [{"name": "skill.invoke", "status": "ok", "attributes": {"skill": "movie_discovery"}}]
+        events += [{"name": "mcp.tool.call", "status": "ok", "attributes": {"tool": tool, "provider": "TMDB", "response": {"title": "The Get Out"}}}
+                   for tool in ("search_movies", "get_movie_details")]
+        return f"Variable answer {count}: The Get Out premiered in 1999.", {"events": events}
+
+    def judge(**kwargs):
+        assert "The Get Out" in kwargs["response"]
+        assert kwargs["trace"]["events"]
+        return {"score": 4.5, "passed": True, "criteria": {}, "rationale": "Evidence is present."}
+
+    result = evaluate_live_judge_case(case, runner=runner, judge=judge, repetitions=3)
+    assert count == 3
+    assert result["passed"]
+    assert result["judge_summary"]["score"] == 4.5
+    assert result["judge_summary"]["judge_pass_rate"] == 1.0
+    assert [attempt["attempt_number"] for attempt in result["turns"]] == [1, 2, 3]
+    assert "mcp_tool:get_movie_details" in [check["name"] for check in result["checks"]]
+
+
+def test_fixture_provider_runner_keeps_mcp_orchestration_live_and_restores_client(monkeypatch):
+    from popcorn import mcp_server
+    import popcorn_tasting.evaluate as evaluation
+
+    original = mcp_server.TMDBClient
+    seen = {}
+
+    def fake_agent(question, history):
+        seen["client"] = mcp_server.TMDBClient
+        return "fixture-backed answer", {"events": []}
+
+    monkeypatch.setattr(evaluation, "_run_agent", fake_agent)
+    response, trace = evaluation._fixture_provider_runner("question", [])
+    assert response == "fixture-backed answer"
+    assert trace == {"events": []}
+    assert seen["client"] is evaluation._LiveDemoTMDB
+    assert mcp_server.TMDBClient is original
+
+    fixture = evaluation._LiveDemoTMDB()
+    results = asyncio.run(fixture.search_movies("Get Out", 2017))
+    assert results[0]["id"] == 419430
+
+
+def test_live_judge_baseline_flags_material_semantic_score_drop(tmp_path):
+    path = Path(__file__).resolve().parents[1] / "data/golden/live_judge_demo.json"
+    baseline = tmp_path / "baseline.json"
+    baseline.write_text(json.dumps({"results": [{
+        "case_id": "live-get-out-grounded-summary", "passed": True,
+        "judge_summary": {"score": 4.8},
+    }]}))
+
+    def runner(_question, _history):
+        return "A movie answer without sourced details.", {"events": [
+            {"name": "skill.invoke", "status": "ok", "attributes": {"skill": "movie_discovery"}},
+            *[{"name": "mcp.tool.call", "status": "ok", "attributes": {"tool": tool, "response": {}}}
+              for tool in ("search_movies", "get_movie_details")],
+        ]}
+
+    def judge(**_kwargs):
+        return {"score": 3.4, "passed": False, "criteria": {}, "rationale": "The answer lacks evidence."}
+
+    report = evaluate_live_judge_dataset(path, repetitions=3, baseline_path=baseline, runner=runner, judge=judge)
+    assert not report["passed"]
+    assert report["judge_score_regressions"] == [{
+        "case_id": "live-get-out-grounded-summary", "baseline_score": 4.8,
+        "current_score": 3.4, "drop": 1.4, "threshold": 0.6,
+    }]
+    assert "LLM judge score changes" in render_markdown(report)
+    assert "3.4/5" in render_html(report)

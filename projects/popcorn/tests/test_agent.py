@@ -146,7 +146,7 @@ def test_deepseek_selects_skill_and_returns_final_response(monkeypatch):
                                     "id": "call_1",
                                     "function": {
                                         "name": "movie_discovery",
-                                        "arguments": '{"title":"The Matrix"}',
+                                        "arguments": '{"title":"The Matrix", "year":1999}',
                                     },
                                 }
                             ],
@@ -178,6 +178,9 @@ def test_deepseek_selects_skill_and_returns_final_response(monkeypatch):
         "search_movies",
         "get_movie_details",
     ]
+    assert next(event for event in trace.events if event.name == "mcp.tool.call").attributes["arguments"] == {
+        "query": "The Matrix", "year": 1999, "language": "en-US",
+    }
     assert any(
         event.attributes.get("input_tokens") == 20
         for event in trace.events
