@@ -99,7 +99,7 @@ def evaluate_case(case: dict[str, Any], runner: Callable = _run_agent) -> dict[s
         turn_results[-1]["passed"] = False
     return {"case_id": case["id"], "output_evaluation": "deterministic + rubric" if any("rubric" in turn for turn in turns) else "deterministic checks", "turns": turn_results, "passed": all(t["passed"] for t in turn_results) and all(c["passed"] for c in checks), "checks": checks,
             "events": all_events,
-            "invocations": [{"kind": "skill" if e.get("name") == "skill.invoke" else "mcp_tool" if e.get("name") == "mcp.tool.call" else "provider_api", "name": e.get("attributes", {}).get("skill") if e.get("name") == "skill.invoke" else e.get("attributes", {}).get("tool") if e.get("name") == "mcp.tool.call" else f"{e.get('attributes', {}).get('provider')} {e.get('attributes', {}).get('method')} {urlsplit(str(e.get('attributes', {}).get('url', ''))).path}", "status": e.get("status"), "attributes": e.get("attributes", {}), "parent_id": e.get("parent_id")} for e in all_events if e.get("name") in {"skill.invoke", "mcp.tool.call", "provider.http.call"}]}
+            "invocations": [{"kind": "skill" if e.get("name") == "skill.invoke" else "mcp_tool" if e.get("name") == "mcp.tool.call" else "provider_api", "name": e.get("attributes", {}).get("skill") if e.get("name") == "skill.invoke" else e.get("attributes", {}).get("tool") if e.get("name") == "mcp.tool.call" else f"{e.get('attributes', {}).get('provider')} {e.get('attributes', {}).get('method')} {urlsplit(str(e.get('attributes', {}).get('url', ''))).path or '/'}", "status": e.get("status"), "attributes": e.get("attributes", {}), "parent_id": e.get("parent_id")} for e in all_events if e.get("name") in {"skill.invoke", "mcp.tool.call", "provider.http.call"}]}
 
 
 def _coverage(cases: list[dict[str, Any]], results: list[dict[str, Any]]) -> dict[str, Any]:
@@ -119,6 +119,12 @@ def _coverage(cases: list[dict[str, Any]], results: list[dict[str, Any]]) -> dic
     for (kind, name), count in sorted(expected.items()):
         rows.setdefault(kind, {})[name] = {"expected": count, "attempted": observed[kind, name], "succeeded": succeeded[kind, name], "failed": observed[kind, name] - succeeded[kind, name], "percent": round(100 * min(count, observed[kind, name]) / count)}
     for (kind, name), count in observed.items():
+        if kind == "provider_api":
+            rows.setdefault(kind, {})[name] = {
+                "attempted": count, "succeeded": succeeded[kind, name],
+                "failed": count - succeeded[kind, name],
+            }
+            continue
         if count and (kind, name) not in expected:
             rows.setdefault(kind, {})[name] = {"expected": 0, "attempted": count, "succeeded": succeeded[kind, name], "failed": count - succeeded[kind, name], "percent": 0, "unexpected": True}
     flow_counts: Counter[str] = Counter()
@@ -143,13 +149,13 @@ def _coverage(cases: list[dict[str, Any]], results: list[dict[str, Any]]) -> dic
                 flow_succeeded[flow] += event.get("status") == "ok"
             for api in api_events:
                 attrs = api.get("attributes", {})
-                route = urlsplit(str(attrs.get("url", ""))).path
+                route = urlsplit(str(attrs.get("url", ""))).path or "/"
                 flow = f"{skill} → {tool} → {attrs.get('provider')} {attrs.get('method')} {route}"
                 flow_counts[flow] += 1
                 flow_succeeded[flow] += api.get("status") == "ok"
     rows["flow"] = {
-        name: {"expected": 0, "attempted": count, "succeeded": flow_succeeded[name],
-               "failed": count - flow_succeeded[name], "percent": 0}
+        name: {"attempted": count, "succeeded": flow_succeeded[name],
+               "failed": count - flow_succeeded[name]}
         for name, count in sorted(flow_counts.items())
     }
     return rows
@@ -231,12 +237,19 @@ def render_markdown(report: dict[str, Any]) -> str:
     for case in report["results"]:
         transcript = "<br>".join(f"**Input:** {_md(turn['input'])}<br>**Outcome:** {_md(turn['response'])}<br>**Checks:** {sum(bool(c['passed']) for c in turn['checks'])}/{len(turn['checks'])} passed" for turn in case["turns"])
         lines.append(f"| {_md(case['case_id'])} | {_md(case['output_evaluation'])} | {'✅ PASS' if case['passed'] else '❌ FAIL'} | {transcript} |")
-    lines += ["", "### Skill and MCP coverage", "", "| Type | Skill / tool | Expected | Attempted | Succeeded | Failed | Coverage |", "|---|---|---:|---:|---:|---:|---:|"]
+    lines += ["", "### Skill, MCP, and provider paths", "", "| Type | Skill / tool / path | Expected | Attempted | Succeeded | Failed | Coverage / success rate |", "|---|---|---:|---:|---:|---:|---:|"]
     for kind, entries in report["coverage"].items():
         for name, counts in entries.items():
-            label = {"skill": "Skill", "mcp_tool": "MCP tool", "provider_api": "Provider API"}.get(kind, kind)
+            label = {"skill": "Skill", "mcp_tool": "MCP tool", "provider_api": "Provider API", "flow": "Execution path"}.get(kind, kind)
             note = " (unexpected)" if counts.get("unexpected") else ""
-            lines.append(f"| {label} | {_md(name)}{note} | {counts['expected']} | {counts['attempted']} | {counts['succeeded']} | {counts['failed']} | {counts['percent']}% |")
+            if kind in {"provider_api", "flow"}:
+                expected = "—"
+                rate = round(100 * counts["succeeded"] / counts["attempted"]) if counts["attempted"] else 0
+                coverage = f"{rate}% success"
+            else:
+                expected = counts["expected"]
+                coverage = f"{counts['percent']}%"
+            lines.append(f"| {label} | {_md(name)}{note} | {expected} | {counts['attempted']} | {counts['succeeded']} | {counts['failed']} | {coverage} |")
     deterministic = sum(case["output_evaluation"] == "deterministic checks" for case in report["results"])
     rubric = sum(case["output_evaluation"] == "deterministic + rubric" for case in report["results"])
     lines += ["", "### Output evaluation mix", "", f"- Deterministic checks: {deterministic} case(s)", f"- Deterministic checks plus variable-output rubric: {rubric} case(s)", "- Rubrics use transparent weighted keyword checks and sample response variants; they are not an LLM judge."]

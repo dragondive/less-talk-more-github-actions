@@ -44,7 +44,7 @@ def test_rubric_handles_variable_outputs_and_html_shows_test_input_outcome_commi
     assert "abc123" in page and "Input" in page and "Outcome" in page
     assert "search_movies" in page
     summary = render_markdown(report)
-    assert "Test outcomes" in summary and "Skill and MCP coverage" in summary
+    assert "Test outcomes" in summary and "Skill, MCP, and provider paths" in summary
     assert "Deterministic checks plus variable-output rubric" in summary
     assert "abc123" in summary and "The Matrix" in summary
 
