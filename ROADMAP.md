@@ -272,7 +272,7 @@ Do not equate tool coverage with successful tool execution.
 
 ## Phase 8 — Dashboard and CI/CD
 
-**Status:** NOT STARTED — FUTURE
+**Status:** IN PROGRESS — GitHub Actions summary and HTML artifact
 
 ### Candidate tasks
 - [ ] Historical run comparison.
@@ -280,9 +280,9 @@ Do not equate tool coverage with successful tool execution.
 - [ ] Skill and MCP tool coverage views.
 - [ ] Latency and failure analysis.
 - [ ] Baseline and regression visualisation.
-- [ ] GitHub Actions integration.
+- [x] GitHub Actions integration with a per-run Markdown summary.
 - [ ] Configurable CI quality gates.
-- [ ] Publish evaluation reports as build artifacts.
+- [x] Publish JSON and HTML evaluation reports as build artifacts.
 
 ### Acceptance criteria
 - [ ] A code change can trigger an evaluation run.

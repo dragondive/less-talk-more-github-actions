@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from popcorn_tasting.evaluate import evaluate_case, evaluate_dataset, render_html, score_rubric
+from popcorn_tasting.evaluate import evaluate_case, evaluate_dataset, render_html, render_markdown, score_rubric
 
 
 def fake_runner(question, history):
@@ -43,6 +43,10 @@ def test_rubric_handles_variable_outputs_and_html_shows_test_input_outcome_commi
     page = render_html(report)
     assert "abc123" in page and "Input" in page and "Outcome" in page
     assert "search_movies" in page
+    summary = render_markdown(report)
+    assert "Test outcomes" in summary and "Skill and MCP coverage" in summary
+    assert "Deterministic checks plus variable-output rubric" in summary
+    assert "abc123" in summary and "The Matrix" in summary
 
 
 def test_regression_comparison_flags_previously_passing_case(tmp_path):

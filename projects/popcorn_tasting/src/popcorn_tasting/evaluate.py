@@ -109,7 +109,7 @@ def evaluate_case(case: dict[str, Any], runner: Callable = _run_agent) -> dict[s
     checks = [{"name": "expected_skill_sequence", "passed": observed_sequence == expected_sequence, "expected": expected_sequence, "observed": observed_sequence}] if expected_sequence is not None else []
     if checks and not checks[0]["passed"]:
         turn_results[-1]["passed"] = False
-    return {"case_id": case["id"], "turns": turn_results, "passed": all(t["passed"] for t in turn_results) and all(c["passed"] for c in checks), "checks": checks,
+    return {"case_id": case["id"], "output_evaluation": "deterministic + rubric" if any("rubric" in turn for turn in turns) else "deterministic checks", "turns": turn_results, "passed": all(t["passed"] for t in turn_results) and all(c["passed"] for c in checks), "checks": checks,
             "events": all_events,
             "invocations": [{"kind": "skill" if e.get("name") == "skill.invoke" else "mcp_tool", "name": e.get("attributes", {}).get("skill") if e.get("name") == "skill.invoke" else e.get("attributes", {}).get("tool"), "status": e.get("status"), "attributes": e.get("attributes", {}), "parent_id": e.get("parent_id")} for e in all_events if e.get("name") in {"skill.invoke", "mcp.tool.call"}]}
 
@@ -165,9 +165,44 @@ def render_html(report: dict[str, Any]) -> str:
     for case in report["results"]:
         turns = "".join(f"<h4>Input</h4><pre>{html.escape(t['input'])}</pre><h4>Outcome</h4><pre>{html.escape(t['response'])}</pre><ul>{''.join(f'<li>{"PASS" if check["passed"] else "FAIL"}: {html.escape(check["name"])}</li>' for check in t['checks'])}</ul>" for t in case["turns"])
         details = html.escape(json.dumps(case["invocations"], indent=2))
-        rows.append(f"<details><summary>{html.escape(case['case_id'])}: {'PASS' if case['passed'] else 'FAIL'}</summary>{turns}<h4>Skill/MCP sequence</h4><pre>{details}</pre></details>")
+        rows.append(f"<details><summary>{html.escape(case['case_id'])}: {'PASS' if case['passed'] else 'FAIL'} · {html.escape(case['output_evaluation'])}</summary>{turns}<h4>Skill/MCP sequence</h4><pre>{details}</pre></details>")
     coverage = html.escape(json.dumps(report["coverage"], indent=2))
     return f"<!doctype html><meta charset='utf-8'><title>Popcorn Tasting</title><style>body{{font:16px system-ui;max-width:1100px;margin:2rem auto}}pre{{white-space:pre-wrap;background:#f3f3f3;padding:1rem}}details{{border:1px solid #ccc;padding:1rem;margin:1rem 0}}</style><h1>Popcorn Tasting {'PASS' if report['passed'] else 'FAIL'}</h1><p>Commit: <code>{html.escape(str(report.get('commit') or 'unknown'))}</code> · Dataset: {html.escape(str(report['dataset_version']))}</p><h2>Cases</h2>{''.join(rows)}<h2>Coverage</h2><pre>{coverage}</pre>"
+
+
+def _md(value: object) -> str:
+    return html.escape(str(value), quote=False).replace("|", "\\|").replace("\r", " ").replace("\n", "<br>")
+
+
+def render_markdown(report: dict[str, Any]) -> str:
+    """Create a concise GitHub Actions job summary with outcomes and coverage."""
+    passed = sum(bool(case["passed"]) for case in report["results"])
+    total = len(report["results"])
+    lines = [
+        f"## Popcorn Tasting: {'✅ PASS' if report['passed'] else '❌ FAIL'}",
+        "",
+        f"**Commit:** `{_md(report.get('commit') or 'unknown')}` · **Dataset:** `{_md(report['dataset_version'])}` · **Cases:** {passed}/{total} passed · **Mode:** `{_md(report.get('execution_mode', 'fixture'))}`",
+        "",
+        "### Test outcomes",
+        "",
+        "| Test | Output evaluation | Status | Input → outcome |",
+        "|---|---|---:|---|",
+    ]
+    for case in report["results"]:
+        transcript = "<br>".join(f"**Input:** {_md(turn['input'])}<br>**Outcome:** {_md(turn['response'])}" for turn in case["turns"])
+        lines.append(f"| {_md(case['case_id'])} | {_md(case['output_evaluation'])} | {'✅ PASS' if case['passed'] else '❌ FAIL'} | {transcript} |")
+    lines += ["", "### Skill and MCP coverage", "", "| Type | Skill / tool | Expected | Attempted | Succeeded | Failed | Coverage |", "|---|---|---:|---:|---:|---:|---:|"]
+    for kind, entries in report["coverage"].items():
+        for name, counts in entries.items():
+            label = "Skill" if kind == "skill" else "MCP tool"
+            note = " (unexpected)" if counts.get("unexpected") else ""
+            lines.append(f"| {label} | {_md(name)}{note} | {counts['expected']} | {counts['attempted']} | {counts['succeeded']} | {counts['failed']} | {counts['percent']}% |")
+    deterministic = sum(case["output_evaluation"] == "deterministic checks" for case in report["results"])
+    rubric = sum(case["output_evaluation"] == "deterministic + rubric" for case in report["results"])
+    lines += ["", "### Output evaluation mix", "", f"- Deterministic checks: {deterministic} case(s)", f"- Deterministic checks plus variable-output rubric: {rubric} case(s)", "- Rubrics use transparent weighted keyword checks and sample response variants; they are not an LLM judge."]
+    if "regressions" in report:
+        lines += ["", "### Baseline regressions", "", "None detected." if not report["regressions"] else ", ".join(f"`{_md(case_id)}`" for case_id in report["regressions"])]
+    return "\n".join(lines) + "\n"
 
 
 def main() -> int:
@@ -176,6 +211,7 @@ def main() -> int:
     parser.add_argument("--dataset", type=Path, default=root / "data/golden/demo.json")
     parser.add_argument("--output", type=Path, default=Path("artifacts/evaluation.json"))
     parser.add_argument("--html", type=Path, default=Path("artifacts/index.html"))
+    parser.add_argument("--summary", type=Path, help="Write a Markdown summary (defaults to GitHub Actions job summary when available)")
     parser.add_argument("--baseline", type=Path)
     parser.add_argument("--mode", choices=("fixture", "live"), default="fixture", help="fixture runs offline; live calls the configured Popcorn agent and APIs")
     args = parser.parse_args()
@@ -186,6 +222,11 @@ def main() -> int:
     args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     args.html.parent.mkdir(parents=True, exist_ok=True)
     args.html.write_text(render_html(report), encoding="utf-8")
+    summary_path = args.summary or (Path(os.environ["GITHUB_STEP_SUMMARY"]) if os.getenv("GITHUB_STEP_SUMMARY") else None)
+    if summary_path:
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        with summary_path.open("a", encoding="utf-8") as summary_file:
+            summary_file.write(render_markdown(report))
     print(f"{'PASS' if report['passed'] else 'FAIL'} · {report['commit'] or 'unknown commit'} · {len(report['results'])} cases")
     return 0 if report["passed"] else 1
 
