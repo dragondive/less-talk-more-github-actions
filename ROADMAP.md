@@ -212,7 +212,7 @@ Observability should be implemented incrementally in earlier phases; this phase 
 
 ## Phase 6 — Popcorn Tasting: evaluation foundation
 
-**Status:** IN PROGRESS — offline fixture runner and report
+**Status:** IN PROGRESS — offline fake-backed Popcorn E2E runner and report
 
 ### Objectives
 Create an independent evaluation platform, using Popcorn as its first target.
@@ -225,7 +225,9 @@ Create an independent evaluation platform, using Popcorn as its first target.
 - [ ] Store runs and results.
 - [x] Implement expected skill/tool checks, response rubrics, trace details, and invocation coverage.
 - [x] Produce JSON and standalone HTML reports with commit metadata.
-- [x] Compare current case results to a saved report for pass-to-fail regressions.
+- [x] Compare current case and check results to a saved report for pass-to-fail regressions.
+- [x] Exercise scripted fake LLM decisions through actual Popcorn orchestration, skills and in-process MCP.
+- [x] Add natural multi-turn movie, cross-domain movie/music and AniList scenarios with deterministic provider fakes.
 - [ ] Validate live LLM and provider execution with configured credentials.
 
 ### Acceptance criteria
@@ -306,4 +308,4 @@ Do not add these to the initial Popcorn milestone without an explicit decision:
 
 ## Current next action
 
-Run the offline Popcorn Tasting suite and inspect its HTML/JSON artifact. Then, when the LLM API is configured, run the same evaluation cases in live mode, review how actual model choices and provider payloads appear in the trace, and refine the rubric and cross-provider case based on evidence. DeepSeek remains selectable with `LLM_PROVIDER=deepseek`; Gemini remains selectable with `LLM_PROVIDER=gemini`.
+Run the offline Popcorn Tasting suite and inspect its HTML/JSON artifact. Then run the same cases in live mode once model credentials are configured and review actual model choices and provider behavior. DeepSeek remains selectable with `LLM_PROVIDER=deepseek`; Gemini remains selectable with `LLM_PROVIDER=gemini`.

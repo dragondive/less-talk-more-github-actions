@@ -1,31 +1,30 @@
 {
-  "version": "0.2",
-  "description": "Offline evaluation scenarios for Popcorn's observable discovery workflow.",
+  "version": "1.0",
+  "description": "Conversational offline E2E evaluations through Popcorn's agent, skills, MCP server and provider adapter boundaries.",
   "cases": [
     {
-      "id": "movie-discovery-variable-answer",
-      "input": "movie: The Matrix",
-      "expected_skills": ["movie_discovery"],
-      "expected_tools": ["search_movies"],
-      "rubric": {
-        "minimum_score": 0.6,
-        "criteria": [
-          {"name": "uses science fiction evidence", "terms": ["science fiction", "sci-fi"], "weight": 0.6},
-          {"name": "uses calibrated wording", "terms": ["may", "might", "could"], "weight": 0.4}
-        ],
-        "sample_responses": [
-          "The Matrix could suit fans of science fiction.",
-          "The Matrix is a science fiction film."
-        ]
-      }
+      "id": "matrix-context-follow-up",
+      "turns": [
+        {"input": "Could you tell me about the movie The Matrix?", "expected_skills": ["movie_discovery"], "expected_tools": ["search_movies", "get_movie_details"], "must_include": ["1999", "science fiction", "TMDB"]},
+        {"input": "And who plays Trinity in it?", "expected_skills": ["movie_discovery"], "expected_tools": ["search_movies", "get_movie_details"], "history_contains": {"user": "The Matrix", "assistant": "science fiction"}, "must_include": ["Carrie-Anne Moss", "Trinity"]}
+      ],
+      "expected_sequence": ["movie_discovery", "movie_discovery"]
     },
     {
-      "id": "movie-to-music-follow-up",
+      "id": "cross-domain-movie-and-music-no-link-inference",
       "turns": [
-        {"input": "movie: The Matrix", "expected_skills": ["movie_discovery"], "expected_tools": ["search_movies"]},
-        {"input": "Now find music by Radiohead", "expected_skills": ["music_discovery"], "expected_tools": ["search_musicbrainz_artists"], "history_contains": {"user": "The Matrix", "assistant": "science fiction"}}
+        {"input": "I like The Matrix. What is it about?", "expected_skills": ["movie_discovery"], "expected_tools": ["search_movies", "get_movie_details"], "rubric": {"minimum_score": 0.66, "criteria": [{"name": "uses sourced genre", "terms": ["science fiction"], "weight": 0.5}, {"name": "includes movie evidence", "terms": ["TMDB", "Keanu Reeves"], "weight": 0.5}], "sample_responses": ["TMDB lists The Matrix as science fiction, featuring Keanu Reeves.", "The Matrix is listed by TMDB as science fiction with Keanu Reeves."]}},
+        {"input": "Find me some music by Radiohead too. Is it linked to that film?", "expected_skills": ["music_discovery"], "expected_tools": ["search_musicbrainz_artists", "get_musicbrainz_artist", "get_musicbrainz_artist_release_groups"], "history_contains": {"user": "The Matrix", "assistant": "science fiction"}, "must_include": ["no soundtrack relationship", "MusicBrainz", "OK Computer"]}
       ],
       "expected_sequence": ["movie_discovery", "music_discovery"]
+    },
+    {
+      "id": "anilist-title-and-character-evidence",
+      "turns": [
+        {"input": "Tell me about the anime Cowboy Bebop.", "expected_skills": ["anime_manga_discovery"], "expected_tools": ["search_anilist_media", "get_anilist_media_details"], "must_include": ["1998", "Spike Spiegel", "AniList"], "rubric": {"minimum_score": 0.5, "criteria": [{"name": "identifies work and year", "terms": ["Cowboy Bebop", "1998"], "weight": 0.5}, {"name": "retains sourced character relation", "terms": ["Spike Spiegel"], "weight": 0.5}], "sample_responses": ["AniList lists Cowboy Bebop as a 1998 TV anime and names Spike Spiegel as a main character.", "Cowboy Bebop (1998) is a TV anime; AniList associates main character Spike Spiegel."]}},
+        {"input": "Does AniList list a relation to another title?", "expected_skills": ["anime_manga_discovery"], "expected_tools": ["search_anilist_media", "get_anilist_media_details"], "history_contains": {"user": "Cowboy Bebop", "assistant": "Spike Spiegel"}, "must_include": ["PREQUEL", "The Movie"]}
+      ],
+      "expected_sequence": ["anime_manga_discovery", "anime_manga_discovery"]
     }
   ]
 }

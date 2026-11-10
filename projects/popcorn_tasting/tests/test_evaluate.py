@@ -60,7 +60,53 @@ def test_regression_comparison_flags_previously_passing_case(tmp_path):
     assert report["commit"] == "deadbeef"
 
 
+def test_baseline_comparison_reports_check_level_regression(tmp_path):
+    path = tmp_path / "cases.json"
+    path.write_text(json.dumps({"version": "x", "cases": [{"id": "movie", "input": "movie", "expected_skills": ["missing_skill"]}]}))
+    baseline = tmp_path / "baseline.json"
+    baseline.write_text(json.dumps({"results": [{"case_id": "movie", "passed": True, "checks": [{"name": "skill:missing_skill", "passed": True}]}]}))
+    report = evaluate_dataset(path, runner=fake_runner, baseline_path=baseline)
+    assert not report["passed"]
+    assert report["check_regressions"] == [{"case_id": "movie", "check": "skill:missing_skill"}]
+
+
 def test_existing_demo_dataset_can_be_exercised_by_runner_adapter():
+    from popcorn_tasting.fake_agent import run_fake_agent
+
     path = Path(__file__).resolve().parents[1] / "data/golden/demo.json"
-    report = evaluate_dataset(path, runner=fake_runner)
-    assert len(report["results"]) == 2
+    report = evaluate_dataset(path, runner=run_fake_agent)
+    assert len(report["results"]) == 3
+    assert report["passed"]
+
+
+def test_offline_mode_runs_real_agent_orchestration_mcp_and_provider_adapters():
+    from popcorn_tasting.fake_agent import run_fake_agent
+
+    response, trace = run_fake_agent("Tell me about the movie The Matrix", [])
+    assert "Keanu Reeves" in response
+    names = [event["name"] for event in trace["events"]]
+    assert "llm.request" in names
+    assert "llm.tool.call" in names
+    assert "skill.invoke" in names
+    mcp = [event for event in trace["events"] if event["name"] == "mcp.tool.call"]
+    assert [event["attributes"]["tool"] for event in mcp] == ["search_movies", "get_movie_details"]
+    assert all(event["attributes"]["server"] == "popcorn-discovery" for event in mcp)
+    assert all("response" in event["attributes"] for event in mcp)
+    assert mcp[0]["attributes"]["provider_http"][0]["query"]["query"] == ["The Matrix"]
+    assert mcp[0]["attributes"]["provider_http"][0]["response"]["results"][0]["id"] == 603
+    decision = next(event for event in trace["events"] if event["name"] == "llm.request")
+    assert decision["attributes"]["decision"][0]["tool"] == "movie_discovery"
+    assert mcp[0]["attributes"]["arguments"] == {"query": "The Matrix", "language": "en-US"}
+
+
+def test_offline_dataset_runs_all_conversational_scenarios_and_reports_trace():
+    from popcorn_tasting.fake_agent import run_fake_agent
+
+    path = Path(__file__).resolve().parents[1] / "data/golden/demo.json"
+    report = evaluate_dataset(path, runner=run_fake_agent, commit="feedface")
+    assert report["passed"], report["results"]
+    assert len(report["results"]) == 3
+    assert report["commit"] == "feedface"
+    assert report["coverage"]["skill"]["anime_manga_discovery"]["succeeded"] == 2
+    assert "MusicBrainz" in render_html(report)
+    assert "provider" in render_html(report)

@@ -113,6 +113,16 @@ def test_unsupported_intent_does_not_call_mcp(monkeypatch):
     assert not any(event.name == "mcp.tool.call" for event in trace.events)
 
 
+def test_trace_payloads_redact_secrets_and_bound_large_values():
+    from popcorn.agent import _trace_value
+
+    safe = _trace_value({"api_key": "do-not-store", "nested": {"Authorization": "Bearer secret"}, "ok": "value"})
+    assert safe == {"api_key": "[REDACTED]", "nested": {"Authorization": "[REDACTED]"}, "ok": "value"}
+    bounded = _trace_value({"payload": "x" * 20_000}, limit=100)
+    assert bounded["truncated"] is True
+    assert bounded["original_chars"] > 100
+
+
 def test_deepseek_selects_skill_and_returns_final_response(monkeypatch):
     monkeypatch.setattr(deepseek, "api_key", lambda: "test-secret")
     monkeypatch.setattr(gemini, "api_key", lambda: "")

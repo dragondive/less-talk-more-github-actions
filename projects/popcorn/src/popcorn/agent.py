@@ -133,6 +133,22 @@ def new_trace() -> ExecutionTrace:
     return ExecutionTrace(request_id=str(uuid4()), execution_id=str(uuid4()))
 
 
+def _trace_value(value: object, *, limit: int = 12_000) -> object:
+    """Redact secret-shaped fields and bound values copied into trace artifacts."""
+    secret_names = {"authorization", "api_key", "apikey", "access_token", "token", "password", "secret"}
+    if isinstance(value, dict):
+        cleaned = {key: "[REDACTED]" if str(key).casefold().replace("-", "_") in secret_names
+                   else _trace_value(item, limit=limit) for key, item in value.items()}
+    elif isinstance(value, list):
+        cleaned = [_trace_value(item, limit=limit) for item in value]
+    else:
+        cleaned = value
+    encoded = json.dumps(cleaned, ensure_ascii=False, default=str)
+    if len(encoded) <= limit:
+        return cleaned
+    return {"truncated": True, "preview": encoded[:limit], "original_chars": len(encoded)}
+
+
 def _intent(question: str) -> tuple[str, str] | None:
     value = question.strip().rstrip("?.!")
     actor_patterns = (
@@ -178,7 +194,7 @@ async def _call_tool(
         server="popcorn-discovery",
         provider="Last.fm" if tool_name.startswith("get_lastfm") else "MusicBrainz" if tool_name.startswith(("search_musicbrainz", "get_musicbrainz")) else "AniList" if tool_name.startswith(("search_anilist", "get_anilist")) else "TMDB",
         tool=tool_name,
-        arguments=arguments,
+        arguments=_trace_value(arguments),
     )
     try:
         async with Client(mcp) as client:
@@ -197,7 +213,7 @@ async def _call_tool(
         payload = structured.get("result") if set(structured) == {"result"} else structured
         # Provider payloads make tool executions auditable in trace exports and
         # Popcorn Tasting reports. Keep credential-bearing request headers out.
-        event.attributes["response"] = payload
+        event.attributes["response"] = _trace_value(payload)
         return payload
     except Exception:
         event.status = "error"
@@ -260,6 +276,12 @@ async def _request_llm(
     if not isinstance(message, dict):
         event.status = "error"
         raise RuntimeError(f"{provider.title()} returned an unexpected completion message.")
+    # Keep the model's actual decision visible to offline evaluation reports.
+    # Do not copy prompts or credentials into traces.
+    calls = message.get("tool_calls")
+    event.attributes["decision"] = ([{"tool": call.get("function", {}).get("name"),
+        "arguments": call.get("function", {}).get("arguments")} for call in calls if isinstance(call, dict)]
+        if isinstance(calls, list) else {"final": (message.get("content") or "")[:2000]})
     return message
 
 

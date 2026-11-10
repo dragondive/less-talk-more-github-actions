@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from popcorn.agent import answer
+from popcorn_tasting.fake_agent import run_fake_agent
 
 DEFAULT_RUBRIC = {"criteria": [
     {"name": "action", "terms": ["action"], "weight": 0.4},
@@ -24,20 +25,6 @@ DEFAULT_RUBRIC = {"criteria": [
 def _run_agent(question: str, history: list[dict[str, str]]) -> tuple[str, dict[str, Any]]:
     response, trace = asyncio.run(answer(question, history=history))
     return response, trace.to_dict()
-
-
-def _run_fixture(question: str, history: list[dict[str, str]]) -> tuple[str, dict[str, Any]]:
-    """Deterministic contract fixture for exercising the evaluator without APIs or an LLM."""
-    music = "music" in question.casefold() or "radiohead" in question.casefold()
-    skill, tool, provider = ("music_discovery", "search_musicbrainz_artists", "MusicBrainz") if music else ("movie_discovery", "search_movies", "TMDB")
-    answer_text = ("Radiohead is an artist candidate returned by MusicBrainz; choose a match if results are ambiguous." if music
-                   else "The Matrix is a science fiction film; it could suit fans of the genre.")
-    events = [
-        {"event_id": "fixture-skill", "parent_id": "fixture-agent", "name": "skill.invoke", "status": "ok", "attributes": {"skill": skill}},
-        {"event_id": "fixture-mcp", "parent_id": "fixture-skill", "name": "mcp.tool.call", "status": "ok", "attributes": {"server": "popcorn-discovery", "provider": provider, "tool": tool, "arguments": {"query": "Radiohead" if music else "The Matrix"}, "response": {"fixture": True, "candidates": ["Radiohead"] if music else ["The Matrix"]}}},
-        {"event_id": "fixture-response", "parent_id": "fixture-agent", "name": "agent.response", "status": "ok", "attributes": {"response": answer_text}},
-    ]
-    return answer_text, {"schema_version": "0.1", "request_id": "fixture-request", "execution_id": "fixture-execution", "events": events}
 
 
 def score_rubric(response: str, rubric: dict[str, Any] = DEFAULT_RUBRIC) -> dict[str, Any]:
@@ -143,20 +130,40 @@ def _commit() -> str | None:
         return os.getenv("GITHUB_SHA")
 
 
+def _working_tree_dirty() -> bool | None:
+    try:
+        return bool(subprocess.check_output(["git", "status", "--porcelain"], text=True, stderr=subprocess.DEVNULL).strip())
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+
 def evaluate_dataset(path: Path, runner: Callable = _run_agent, baseline_path: Path | None = None, commit: str | None = None) -> dict[str, Any]:
     dataset = json.loads(path.read_text(encoding="utf-8"))
     results = [evaluate_case(case, runner) for case in dataset["cases"]]
-    report: dict[str, Any] = {"dataset_version": dataset["version"], "commit": commit or _commit(), "passed": all(r["passed"] for r in results), "coverage": _coverage(dataset["cases"], results), "results": results}
+    report: dict[str, Any] = {"dataset_version": dataset["version"], "commit": commit or _commit(), "working_tree_dirty": _working_tree_dirty(), "passed": all(r["passed"] for r in results), "coverage": _coverage(dataset["cases"], results), "results": results}
     if baseline_path and baseline_path.exists():
         baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
         previous = {r["case_id"]: r for r in baseline.get("results", [])}
         regressions = []
+        check_regressions = []
         for result in results:
             old = previous.get(result["case_id"])
             if old and old.get("passed") and not result["passed"]:
                 regressions.append(result["case_id"])
+            if old:
+                def flatten_checks(item: dict[str, Any]) -> dict[str, bool]:
+                    checks = list(item.get("checks", []))
+                    checks.extend(check for turn in item.get("turns", []) for check in turn.get("checks", []))
+                    return {c.get("name"): c.get("passed") for c in checks}
+                old_checks = flatten_checks(old)
+                new_checks = flatten_checks(result)
+                for name, passed in new_checks.items():
+                    if old_checks.get(name) is True and passed is False:
+                        check_regressions.append({"case_id": result["case_id"], "check": name})
         report["regressions"] = regressions
+        report["check_regressions"] = check_regressions
         report["passed"] &= not regressions
+        report["passed"] &= not check_regressions
     return report
 
 
@@ -164,10 +171,10 @@ def render_html(report: dict[str, Any]) -> str:
     rows = []
     for case in report["results"]:
         turns = "".join(f"<h4>Input</h4><pre>{html.escape(t['input'])}</pre><h4>Outcome</h4><pre>{html.escape(t['response'])}</pre><ul>{''.join(f'<li>{"PASS" if check["passed"] else "FAIL"}: {html.escape(check["name"])}</li>' for check in t['checks'])}</ul>" for t in case["turns"])
-        details = html.escape(json.dumps(case["invocations"], indent=2))
-        rows.append(f"<details><summary>{html.escape(case['case_id'])}: {'PASS' if case['passed'] else 'FAIL'} · {html.escape(case['output_evaluation'])}</summary>{turns}<h4>Skill/MCP sequence</h4><pre>{details}</pre></details>")
+        details = html.escape(json.dumps(case["events"], indent=2))
+        rows.append(f"<details><summary>{html.escape(case['case_id'])}: {'PASS' if case['passed'] else 'FAIL'} · {html.escape(case['output_evaluation'])}</summary>{turns}<h4>Execution trace (ordered; event IDs and parent IDs)</h4><pre>{details}</pre></details>")
     coverage = html.escape(json.dumps(report["coverage"], indent=2))
-    return f"<!doctype html><meta charset='utf-8'><title>Popcorn Tasting</title><style>body{{font:16px system-ui;max-width:1100px;margin:2rem auto}}pre{{white-space:pre-wrap;background:#f3f3f3;padding:1rem}}details{{border:1px solid #ccc;padding:1rem;margin:1rem 0}}</style><h1>Popcorn Tasting {'PASS' if report['passed'] else 'FAIL'}</h1><p>Commit: <code>{html.escape(str(report.get('commit') or 'unknown'))}</code> · Dataset: {html.escape(str(report['dataset_version']))}</p><h2>Cases</h2>{''.join(rows)}<h2>Coverage</h2><pre>{coverage}</pre>"
+    return f"<!doctype html><meta charset='utf-8'><title>Popcorn Tasting</title><style>body{{font:16px system-ui;max-width:1100px;margin:2rem auto}}pre{{white-space:pre-wrap;background:#f3f3f3;padding:1rem}}details{{border:1px solid #ccc;padding:1rem;margin:1rem 0}}</style><h1>Popcorn Tasting {'PASS' if report['passed'] else 'FAIL'}</h1><p>Commit: <code>{html.escape(str(report.get('commit') or 'unknown'))}</code> · Working tree dirty: {html.escape(str(report.get('working_tree_dirty')))} · Dataset: {html.escape(str(report['dataset_version']))}</p><h2>Cases</h2>{''.join(rows)}<h2>Coverage</h2><pre>{coverage}</pre>"
 
 
 def _md(value: object) -> str:
@@ -181,7 +188,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     lines = [
         f"## Popcorn Tasting: {'✅ PASS' if report['passed'] else '❌ FAIL'}",
         "",
-        f"**Commit:** `{_md(report.get('commit') or 'unknown')}` · **Dataset:** `{_md(report['dataset_version'])}` · **Cases:** {passed}/{total} passed · **Mode:** `{_md(report.get('execution_mode', 'fixture'))}`",
+        f"**Commit:** `{_md(report.get('commit') or 'unknown')}` · **Working tree dirty:** `{_md(report.get('working_tree_dirty'))}` · **Dataset:** `{_md(report['dataset_version'])}` · **Cases:** {passed}/{total} passed · **Mode:** `{_md(report.get('execution_mode', 'fixture'))}`",
         "",
         "### Test outcomes",
         "",
@@ -189,7 +196,7 @@ def render_markdown(report: dict[str, Any]) -> str:
         "|---|---|---:|---|",
     ]
     for case in report["results"]:
-        transcript = "<br>".join(f"**Input:** {_md(turn['input'])}<br>**Outcome:** {_md(turn['response'])}" for turn in case["turns"])
+        transcript = "<br>".join(f"**Input:** {_md(turn['input'])}<br>**Outcome:** {_md(turn['response'])}<br>**Checks:** {sum(bool(c['passed']) for c in turn['checks'])}/{len(turn['checks'])} passed" for turn in case["turns"])
         lines.append(f"| {_md(case['case_id'])} | {_md(case['output_evaluation'])} | {'✅ PASS' if case['passed'] else '❌ FAIL'} | {transcript} |")
     lines += ["", "### Skill and MCP coverage", "", "| Type | Skill / tool | Expected | Attempted | Succeeded | Failed | Coverage |", "|---|---|---:|---:|---:|---:|---:|"]
     for kind, entries in report["coverage"].items():
@@ -202,6 +209,9 @@ def render_markdown(report: dict[str, Any]) -> str:
     lines += ["", "### Output evaluation mix", "", f"- Deterministic checks: {deterministic} case(s)", f"- Deterministic checks plus variable-output rubric: {rubric} case(s)", "- Rubrics use transparent weighted keyword checks and sample response variants; they are not an LLM judge."]
     if "regressions" in report:
         lines += ["", "### Baseline regressions", "", "None detected." if not report["regressions"] else ", ".join(f"`{_md(case_id)}`" for case_id in report["regressions"])]
+        if report.get("check_regressions"):
+            lines += ["", "Check-level pass-to-fail changes:", ""]
+            lines += [f"- `{_md(item['case_id'])}` · `{_md(item['check'])}`" for item in report["check_regressions"]]
     return "\n".join(lines) + "\n"
 
 
@@ -215,7 +225,7 @@ def main() -> int:
     parser.add_argument("--baseline", type=Path)
     parser.add_argument("--mode", choices=("fixture", "live"), default="fixture", help="fixture runs offline; live calls the configured Popcorn agent and APIs")
     args = parser.parse_args()
-    runner = _run_fixture if args.mode == "fixture" else _run_agent
+    runner = run_fake_agent if args.mode == "fixture" else _run_agent
     report = evaluate_dataset(args.dataset, runner=runner, baseline_path=args.baseline)
     report["execution_mode"] = args.mode
     args.output.parent.mkdir(parents=True, exist_ok=True)
