@@ -86,6 +86,8 @@ The repository includes a Render Blueprint at `render.yaml`. In Render, create a
 
 Copy the service's Deploy Hook URL from Render's Settings and add it to the GitHub repository as an Actions secret named `RENDER_DEPLOY_HOOK_URL`. The workflow skips deployment until this secret exists. Render's deploy hook is a secret; do not put its URL in source or chat. See [Render's deploy hook guide](https://render.com/docs/deploy-hooks).
 
+After deployment, open `/tests` on the same Render app to browse the Popcorn Tasting dashboard. It compares the latest run with the previous run by default and lets you select any of the latest ten runs. GitHub Actions stores the bounded, compressed report history on its `eval-history` branch because the free Render service has ephemeral storage. The app serves that data through its own `/api/tests/runs` endpoints. Each report contains synthetic evaluation prompts and sanitized traces; it must not be used to publish private prompts or customer data.
+
 ## Repository layout
 
 ```text
@@ -101,7 +103,7 @@ docs/               # decisions and project guidance
 
 - Gemini or DeepSeek is selected through `LLM_PROVIDER`; without an explicit choice, a configured Gemini key takes precedence over a DeepSeek key. The deterministic router remains as a fallback when neither key is configured. Model-backed chat sends up to four previous successful turns as context; the deterministic router does not interpret follow-up context.
 - Conversation history stays in browser page memory, is cleared on reload, and is not persisted by Popcorn's server. The recent turns are included in requests to the selected model provider when model mode is enabled.
-- TMDB-backed movie/TV workflows, read-only AniList anime/manga skills, focused MusicBrainz artist/release discovery, and Last.fm seed-based music recommendations are implemented; games, cross-domain links, and images are not. AniList, MusicBrainz, and Last.fm live connectivity have not yet been validated. AniList's adult-content filter may not exclude every mature entry.
+- TMDB-backed movie/TV workflows, read-only AniList anime/manga skills, focused MusicBrainz artist/release discovery, and Last.fm seed-based music recommendations are implemented; games, cross-domain links, and images are not. Live calls to TMDB, AniList, and MusicBrainz have succeeded in bounded checks; the full 98-case suite still runs in deterministic fixture mode. AniList's adult-content filter may not exclude every mature entry.
 - TMDB guest ratings are write operations. Popcorn only submits one when the user explicitly asks, and it creates a temporary guest session for that submission.
 - Movie/person matching uses simple exact-name preference and otherwise asks the user to disambiguate. It does not infer identity from similar names.
 - TMDB data can be incomplete. Actor credits are described as the credits TMDB lists, not a complete filmography.

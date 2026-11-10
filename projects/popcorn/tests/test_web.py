@@ -1,5 +1,7 @@
 import asyncio
 import json
+import gzip
+from types import SimpleNamespace
 
 from popcorn import web
 
@@ -35,12 +37,33 @@ def _request(body: bytes, *, content_length: str | None = None):
 def test_homepage_and_health_are_served():
     async def run():
         home = await web.homepage(None)
+        tests = await web.tests_dashboard(None)
         health = await web.health(None)
-        return home.body, health.body
+        return home.body, tests.body, health.body
 
-    home, health = asyncio.run(run())
+    home, tests, health = asyncio.run(run())
     assert b"Entertainment discovery" in home
+    assert b"Evaluation runs" in tests and b"/api/tests/runs" in tests
     assert json.loads(health) == {"status": "ok"}
+
+
+def test_test_run_endpoints_list_history_and_decompress_report(monkeypatch):
+    index = {"schema_version": 1, "runs": [{"id": "run-123", "path": "runs/run-123.json.gz"}]}
+    report = {"commit": "abc123", "results": [{"case_id": "matrix", "passed": True}]}
+    monkeypatch.setattr(web, "_fetch_history_file", lambda path: (
+        json.dumps(index).encode() if path == "index.json" else gzip.compress(json.dumps(report).encode())
+    ))
+
+    async def run():
+        listing = web.test_run_index(None)
+        detail = web.test_run_detail(SimpleNamespace(path_params={"run_id": "run-123"}))
+        invalid = web.test_run_detail(SimpleNamespace(path_params={"run_id": "../../secret"}))
+        return listing, detail, invalid
+
+    listing, detail, invalid = asyncio.run(run())
+    assert json.loads(listing.body) == index
+    assert json.loads(detail.body) == report
+    assert invalid.status_code == 404
 
 
 def test_chat_endpoint_routes_question_and_returns_trace(monkeypatch):

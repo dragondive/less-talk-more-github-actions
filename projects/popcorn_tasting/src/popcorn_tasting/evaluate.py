@@ -11,6 +11,7 @@ import subprocess
 from collections import Counter
 from pathlib import Path
 from typing import Any, Callable
+from urllib.parse import urlsplit
 
 from popcorn.agent import answer
 from popcorn_tasting.fake_agent import run_fake_agent, run_scripted_live_agent
@@ -98,7 +99,7 @@ def evaluate_case(case: dict[str, Any], runner: Callable = _run_agent) -> dict[s
         turn_results[-1]["passed"] = False
     return {"case_id": case["id"], "output_evaluation": "deterministic + rubric" if any("rubric" in turn for turn in turns) else "deterministic checks", "turns": turn_results, "passed": all(t["passed"] for t in turn_results) and all(c["passed"] for c in checks), "checks": checks,
             "events": all_events,
-            "invocations": [{"kind": "skill" if e.get("name") == "skill.invoke" else "mcp_tool", "name": e.get("attributes", {}).get("skill") if e.get("name") == "skill.invoke" else e.get("attributes", {}).get("tool"), "status": e.get("status"), "attributes": e.get("attributes", {}), "parent_id": e.get("parent_id")} for e in all_events if e.get("name") in {"skill.invoke", "mcp.tool.call"}]}
+            "invocations": [{"kind": "skill" if e.get("name") == "skill.invoke" else "mcp_tool" if e.get("name") == "mcp.tool.call" else "provider_api", "name": e.get("attributes", {}).get("skill") if e.get("name") == "skill.invoke" else e.get("attributes", {}).get("tool") if e.get("name") == "mcp.tool.call" else f"{e.get('attributes', {}).get('provider')} {e.get('attributes', {}).get('method')} {urlsplit(str(e.get('attributes', {}).get('url', ''))).path}", "status": e.get("status"), "attributes": e.get("attributes", {}), "parent_id": e.get("parent_id")} for e in all_events if e.get("name") in {"skill.invoke", "mcp.tool.call", "provider.http.call"}]}
 
 
 def _coverage(cases: list[dict[str, Any]], results: list[dict[str, Any]]) -> dict[str, Any]:
@@ -120,6 +121,37 @@ def _coverage(cases: list[dict[str, Any]], results: list[dict[str, Any]]) -> dic
     for (kind, name), count in observed.items():
         if count and (kind, name) not in expected:
             rows.setdefault(kind, {})[name] = {"expected": 0, "attempted": count, "succeeded": succeeded[kind, name], "failed": count - succeeded[kind, name], "percent": 0, "unexpected": True}
+    flow_counts: Counter[str] = Counter()
+    flow_succeeded: Counter[str] = Counter()
+    for result in results:
+        events = result.get("events", [])
+        by_id = {event.get("event_id"): event for event in events}
+        apis_by_mcp: dict[str, list[dict[str, Any]]] = {}
+        for event in events:
+            if event.get("name") == "provider.http.call":
+                apis_by_mcp.setdefault(str(event.get("parent_id")), []).append(event)
+        for event in events:
+            if event.get("name") != "mcp.tool.call":
+                continue
+            parent = by_id.get(event.get("parent_id"), {})
+            skill = parent.get("attributes", {}).get("skill", "unknown skill")
+            tool = event.get("attributes", {}).get("tool", "unknown tool")
+            api_events = apis_by_mcp.get(str(event.get("event_id")), [])
+            if not api_events:
+                flow = f"{skill} → {tool}"
+                flow_counts[flow] += 1
+                flow_succeeded[flow] += event.get("status") == "ok"
+            for api in api_events:
+                attrs = api.get("attributes", {})
+                route = urlsplit(str(attrs.get("url", ""))).path
+                flow = f"{skill} → {tool} → {attrs.get('provider')} {attrs.get('method')} {route}"
+                flow_counts[flow] += 1
+                flow_succeeded[flow] += api.get("status") == "ok"
+    rows["flow"] = {
+        name: {"expected": 0, "attempted": count, "succeeded": flow_succeeded[name],
+               "failed": count - flow_succeeded[name], "percent": 0}
+        for name, count in sorted(flow_counts.items())
+    }
     return rows
 
 
@@ -202,7 +234,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     lines += ["", "### Skill and MCP coverage", "", "| Type | Skill / tool | Expected | Attempted | Succeeded | Failed | Coverage |", "|---|---|---:|---:|---:|---:|---:|"]
     for kind, entries in report["coverage"].items():
         for name, counts in entries.items():
-            label = "Skill" if kind == "skill" else "MCP tool"
+            label = {"skill": "Skill", "mcp_tool": "MCP tool", "provider_api": "Provider API"}.get(kind, kind)
             note = " (unexpected)" if counts.get("unexpected") else ""
             lines.append(f"| {label} | {_md(name)}{note} | {counts['expected']} | {counts['attempted']} | {counts['succeeded']} | {counts['failed']} | {counts['percent']}% |")
     deterministic = sum(case["output_evaluation"] == "deterministic checks" for case in report["results"])
@@ -221,7 +253,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run Popcorn's offline-first AI evaluation suite")
     parser.add_argument("--dataset", type=Path, default=root / "data/golden/demo.json")
     parser.add_argument("--output", type=Path, default=Path("artifacts/evaluation.json"))
-    parser.add_argument("--html", type=Path, default=Path("artifacts/index.html"))
+    parser.add_argument("--html", type=Path, help="Optionally write a standalone HTML report")
     parser.add_argument("--summary", type=Path, help="Write a Markdown summary (defaults to GitHub Actions job summary when available)")
     parser.add_argument("--baseline", type=Path)
     parser.add_argument("--mode", choices=("fixture", "mcp", "live"), default="fixture", help="fixture uses fake provider HTTP; mcp uses scripted model decisions with live provider APIs; live uses the configured model and APIs")
@@ -232,8 +264,9 @@ def main() -> int:
     report["execution_mode"] = args.mode
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-    args.html.parent.mkdir(parents=True, exist_ok=True)
-    args.html.write_text(render_html(report), encoding="utf-8")
+    if args.html:
+        args.html.parent.mkdir(parents=True, exist_ok=True)
+        args.html.write_text(render_html(report), encoding="utf-8")
     summary_path = args.summary or (Path(os.environ["GITHUB_STEP_SUMMARY"]) if os.getenv("GITHUB_STEP_SUMMARY") else None)
     if summary_path:
         summary_path.parent.mkdir(parents=True, exist_ok=True)

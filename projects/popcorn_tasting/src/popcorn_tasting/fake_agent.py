@@ -56,12 +56,7 @@ def run_fake_agent(question: str, history: list[dict[str, str]]) -> tuple[str, d
     """Fake model and HTTP boundaries; execute real provider adapters, agent and MCP path."""
     choice = _tool_choice(question, history)
     request_no = 0
-    provider_requests: list[dict] = []
-
     def record(provider: str, method: str, url: str, request: object, response: object) -> bytes:
-        parsed = urlparse(url)
-        provider_requests.append({"provider": provider, "method": method, "url": url,
-            "query": parse_qs(parsed.query), "request": request, "response": response})
         return _json_bytes(response)
 
     def tmdb_http(url, headers, timeout):
@@ -160,17 +155,7 @@ def run_fake_agent(question: str, history: list[dict[str, str]]) -> tuple[str, d
          patch.object(mcp_server, "AniListClient", lambda: AniListClient(request_bytes=anilist_http)), \
          patch.object(mcp_server, "LastFMClient", lambda: LastFMClient(api_key="offline-fixture-key", get_bytes=lastfm_http)), \
          patch.object(mcp_server, "_musicbrainz", MusicBrainzClient(request_bytes=musicbrainz_http, clock=lambda: 0, sleeper=lambda _: None)):
-        original_call_tool = agent._call_tool
-
-        async def traced_call_tool(name, arguments, trace, parent_id):
-            start = len(provider_requests)
-            result = await original_call_tool(name, arguments, trace, parent_id)
-            if len(provider_requests) > start:
-                trace.events[-1].attributes["provider_http"] = agent._trace_value(provider_requests[start:])
-            return result
-
-        with patch.object(agent, "_call_tool", traced_call_tool):
-            response, trace = asyncio.run(agent.answer(question, history=history))
+        response, trace = asyncio.run(agent.answer(question, history=history))
     return response, trace.to_dict()
 
 

@@ -12,6 +12,7 @@ from mcp import Client
 
 from popcorn import llm
 from popcorn.mcp_server import mcp
+from popcorn.provider_trace import capture_provider_requests, restore_provider_recorder
 from popcorn.skills import actor_filmography, anilist_character_exploration, anilist_filtered_discovery, anilist_relation_exploration, anilist_staff_exploration, anime_manga_discovery, franchise_exploration, movie_discovery, music_discovery, music_recommendations, related_titles, title_discovery, title_rating, tmdb_reference, tv_discovery, watch_availability
 
 SYSTEM_PROMPT = """You are Popcorn, an entertainment discovery assistant.
@@ -196,6 +197,11 @@ async def _call_tool(
         tool=tool_name,
         arguments=_trace_value(arguments),
     )
+    recorder_token = capture_provider_requests(
+        lambda name, attributes, status, duration_ms: trace.record(
+            name, parent_id=event.event_id, status=status, duration_ms=round(duration_ms, 2), **attributes
+        )
+    )
     try:
         async with Client(mcp) as client:
             result = await client.call_tool(tool_name, arguments)
@@ -218,6 +224,8 @@ async def _call_tool(
     except Exception:
         event.status = "error"
         raise
+    finally:
+        restore_provider_recorder(recorder_token)
 
 
 async def _invoke_skill(

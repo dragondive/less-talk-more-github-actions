@@ -7,6 +7,8 @@ from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from popcorn.provider_trace import provider_http_status, provider_request
+
 API_URL = "https://graphql.anilist.co"
 
 SEARCH_QUERY = """query ($search: String!, $type: MediaType!) {
@@ -69,13 +71,16 @@ class AniListClient:
     def _urlopen(url: str, headers: dict[str, str], timeout: float, body: bytes) -> bytes:
         request = Request(url, data=body, headers=headers, method="POST")
         with urlopen(request, timeout=timeout) as response:
+            provider_http_status(response.status)
             return response.read()
 
     def _query(self, query: str, variables: dict[str, object]) -> dict[str, Any]:
         body = json.dumps({"query": query, "variables": variables}).encode("utf-8")
         headers = {"Accept": "application/json", "Content-Type": "application/json", "User-Agent": "Popcorn entertainment discovery demo"}
         try:
-            raw = self._request_bytes(API_URL, headers, self._timeout, body)
+            with provider_request("AniList", "POST", API_URL, json.loads(body)) as evidence:
+                raw = self._request_bytes(API_URL, headers, self._timeout, body)
+                evidence.response(raw)
         except HTTPError as error:
             if error.code == 429:
                 raise AniListError("AniList rate limit reached. Wait before trying again.") from None

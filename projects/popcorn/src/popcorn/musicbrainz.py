@@ -10,6 +10,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
+from popcorn.provider_trace import provider_http_status, provider_request
+
 API_URL = "https://musicbrainz.org/ws/2"
 USER_AGENT = "Popcorn/0.1.0 (https://github.com/dragondive/less-talk-more-github-actions)"
 
@@ -29,6 +31,7 @@ class MusicBrainzClient:
     @staticmethod
     def _urlopen(url: str, headers: dict[str, str], timeout: float) -> bytes:
         with urlopen(Request(url, headers=headers), timeout=timeout) as response:
+            provider_http_status(response.status)
             return response.read()
 
     def _get(self, path: str, params: dict[str, str]) -> dict[str, Any]:
@@ -40,7 +43,9 @@ class MusicBrainzClient:
         query = "&".join(f"{quote(k)}={quote(v, safe='') }" for k, v in params.items())
         url = f"{API_URL}/{path}?{query}"
         try:
-            raw = self._request_bytes(url, {"Accept": "application/json", "User-Agent": USER_AGENT}, self._timeout)
+            with provider_request("MusicBrainz", "GET", url) as evidence:
+                raw = self._request_bytes(url, {"Accept": "application/json", "User-Agent": USER_AGENT}, self._timeout)
+                evidence.response(raw)
         except HTTPError as error:
             if error.code == 503:
                 raise MusicBrainzError("MusicBrainz is busy or rate limiting requests (HTTP 503). Wait before trying again.") from None

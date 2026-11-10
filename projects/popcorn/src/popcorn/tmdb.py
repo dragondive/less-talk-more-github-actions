@@ -10,6 +10,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from popcorn.provider_trace import provider_http_status, provider_request
+
 
 class TMDBError(RuntimeError):
     """A safe, user-facing TMDB request error."""
@@ -55,6 +57,7 @@ class TMDBClient:
     def _urlopen(url: str, headers: dict[str, str], timeout: float) -> bytes:
         request = Request(url, headers=headers, method="GET")
         with urlopen(request, timeout=timeout) as response:
+            provider_http_status(response.status)
             return response.read()
 
     @staticmethod
@@ -63,6 +66,7 @@ class TMDBClient:
     ) -> bytes:
         request = Request(url, data=body, headers=headers, method=method)
         with urlopen(request, timeout=timeout) as response:
+            provider_http_status(response.status)
             return response.read()
 
     def _request_json(
@@ -88,10 +92,12 @@ class TMDBClient:
                     "Accept": "application/json",
                     **({"Content-Type": "application/json"} if request_body is not None else {}),
                 }
-            if method == "GET" and self._get_bytes_override is not None:
-                response_body = self._get_bytes(url, headers, self._timeout)
-            else:
-                response_body = self._request_bytes(url, headers, self._timeout, method, request_body)
+            with provider_request("TMDB", method, url, body) as evidence:
+                if method == "GET" and self._get_bytes_override is not None:
+                    response_body = self._get_bytes(url, headers, self._timeout)
+                else:
+                    response_body = self._request_bytes(url, headers, self._timeout, method, request_body)
+                evidence.response(response_body)
         except HTTPError as error:
             if error.code == 401:
                 raise TMDBError("TMDB rejected the access token (HTTP 401). Check TMDB_ACCESS_TOKEN.") from None

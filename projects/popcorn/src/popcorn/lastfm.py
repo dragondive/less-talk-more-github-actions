@@ -9,6 +9,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from popcorn.provider_trace import provider_http_status, provider_request
+
 from popcorn.config import configured_value
 
 API_URL = "https://ws.audioscrobbler.com/2.0/"
@@ -29,6 +31,7 @@ class LastFMClient:
     @staticmethod
     def _urlopen(url: str, headers: dict[str, str], timeout: float) -> bytes:
         with urlopen(Request(url, headers=headers, method="GET"), timeout=timeout) as response:
+            provider_http_status(response.status)
             return response.read()
 
     def _request(self, method: str, params: dict[str, str]) -> dict[str, Any]:
@@ -36,7 +39,10 @@ class LastFMClient:
             raise LastFMError("Last.fm recommendations are not configured. Set LASTFM_API_KEY.")
         query = urlencode({"method": method, **params, "api_key": self._api_key, "format": "json"})
         try:
-            raw = self._get_bytes(f"{API_URL}?{query}", {"Accept": "application/json", "User-Agent": USER_AGENT}, self._timeout)
+            url = f"{API_URL}?{query}"
+            with provider_request("Last.fm", "GET", url) as evidence:
+                raw = self._get_bytes(url, {"Accept": "application/json", "User-Agent": USER_AGENT}, self._timeout)
+                evidence.response(raw)
         except HTTPError as error:
             raise LastFMError(f"Last.fm request failed with HTTP {error.code}.") from None
         except (TimeoutError, URLError, OSError):

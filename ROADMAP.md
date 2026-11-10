@@ -222,7 +222,7 @@ Create an independent evaluation platform, using Popcorn as its first target.
 - [ ] Define test-case format and versioning.
 - [x] Implement evaluation runner with deterministic fixture and live-agent modes.
 - [x] Add a Popcorn live-agent adapter.
-- [ ] Store runs and results.
+- [x] Store the latest ten compressed evaluation runs for the hosted demo.
 - [x] Implement expected skill/tool checks, response rubrics, trace details, and invocation coverage.
 - [x] Produce JSON and standalone HTML reports with commit metadata.
 - [x] Compare current case and check results to a saved report for pass-to-fail regressions.
@@ -276,17 +276,18 @@ Do not equate tool coverage with successful tool execution.
 
 ## Phase 8 — Dashboard and CI/CD
 
-**Status:** IN PROGRESS — GitHub Actions summary and HTML artifact
+**Status:** IN PROGRESS — Render-hosted `/tests` dashboard, rolling run history, and Actions summary
 
 ### Candidate tasks
-- [ ] Historical run comparison.
-- [ ] Quality and consistency views.
-- [ ] Skill and MCP tool coverage views.
-- [ ] Latency and failure analysis.
-- [ ] Baseline and regression visualisation.
+- [x] Historical run comparison with selectable runs and latest-versus-previous defaults.
+- [x] Scenario outcomes, sequences, checks, and detailed execution traces.
+- [x] Skill, MCP tool, and provider API endpoint coverage views.
+- [x] Provider request/response timing and failure evidence.
+- [x] Retain the latest ten evaluation runs.
 - [x] GitHub Actions integration with a per-run Markdown summary.
 - [ ] Configurable CI quality gates.
-- [x] Publish JSON and HTML evaluation reports as build artifacts.
+- [x] Publish detailed JSON evaluation reports as build artifacts.
+- [x] Serve the static dashboard from the Render app under `/tests`.
 
 ### Acceptance criteria
 - [ ] A code change can trigger an evaluation run.
@@ -306,8 +307,8 @@ Do not add these to the initial Popcorn milestone without an explicit decision:
 - Large-scale scraping.
 - Full graph database infrastructure.
 - Production distributed deployment.
-- Popcorn Tasting scoring and dashboard features inside Popcorn.
+- Popcorn Tasting scoring and evaluation semantics inside Popcorn. The Render app may serve the separate evaluator's static dashboard and report data.
 
 ## Current next action
 
-Run the offline Popcorn Tasting suite and inspect its HTML/JSON artifact. Then run the same cases in live mode once model credentials are configured and review actual model choices and provider behavior. DeepSeek remains selectable with `LLM_PROVIDER=deepseek`; Gemini remains selectable with `LLM_PROVIDER=gemini`.
+Deploy the `/tests` dashboard and verify the latest-run comparison against retained history. After that setup is stable, add the real LLM and evaluate model-selected skill/tool behavior. DeepSeek remains selectable with `LLM_PROVIDER=deepseek`; Gemini remains selectable with `LLM_PROVIDER=gemini`.

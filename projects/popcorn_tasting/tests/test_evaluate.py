@@ -92,11 +92,14 @@ def test_offline_mode_runs_real_agent_orchestration_mcp_and_provider_adapters():
     assert [event["attributes"]["tool"] for event in mcp] == ["search_movies", "get_movie_details"]
     assert all(event["attributes"]["server"] == "popcorn-discovery" for event in mcp)
     assert all("response" in event["attributes"] for event in mcp)
-    assert mcp[0]["attributes"]["provider_http"][0]["query"]["query"] == ["The Matrix"]
-    assert mcp[0]["attributes"]["provider_http"][0]["response"]["results"][0]["id"] == 603
     decision = next(event for event in trace["events"] if event["name"] == "llm.request")
     assert decision["attributes"]["decision"][0]["tool"] == "movie_discovery"
     assert mcp[0]["attributes"]["arguments"] == {"query": "The Matrix", "language": "en-US"}
+    http = [event for event in trace["events"] if event["name"] == "provider.http.call"]
+    assert [event["attributes"]["provider"] for event in http] == ["TMDB", "TMDB"]
+    assert http[0]["parent_id"] == mcp[0]["event_id"]
+    assert http[0]["attributes"]["url"].endswith("/3/search/movie?query=The+Matrix&language=en-US&include_adult=false")
+    assert http[0]["attributes"]["response"]["results"][0]["id"] == 603
 
 
 def test_offline_dataset_runs_all_conversational_scenarios_and_reports_trace():
@@ -117,3 +120,14 @@ def test_dataset_expansion_has_at_least_80_named_scenarios():
     dataset = json.loads(path.read_text())
     assert len(dataset["cases"]) >= 80
     assert len({case["id"] for case in dataset["cases"]}) == len(dataset["cases"])
+
+
+def test_provider_endpoint_coverage_uses_http_events():
+    def runner(question, history):
+        return "ok", {"events": [
+            {"name": "provider.http.call", "parent_id": "mcp-1", "status": "ok",
+             "attributes": {"provider": "TMDB", "method": "GET", "url": "https://api.themoviedb.org/3/search/movie"}},
+        ]}
+    report = evaluate_dataset(Path(__file__).parents[1] / "data/golden/demo.json", runner=runner,
+                              case_ids={"matrix-context-follow-up"})
+    assert report["coverage"]["provider_api"]["TMDB GET /3/search/movie"]["succeeded"] == 2

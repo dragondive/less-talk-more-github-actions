@@ -15,7 +15,7 @@ Extend the separate Popcorn Tasting project with a small JSON case format and ru
 
 - Wait for an LLM API and build only against live runs: delays test design and makes routine CI depend on credentials, network availability, cost, and model variance.
 - Hand-author agent traces and answers: simple, but it does not prove orchestration. Offline mode instead executes actual orchestration and MCP dispatch with replaceable fakes at model/provider client boundaries.
-- Add a hosted dashboard or database: unnecessary for a hobby demo; workflow artifacts and static HTML are sufficient initially.
+- Add a hosted dashboard or database: unnecessary for the initial runner slice; workflow artifacts and the Actions summary are sufficient until a demo walkthrough requires selection and historical comparison. ADR 0011 records the later approved dashboard and storage decision.
 
 ## Consequences
 
