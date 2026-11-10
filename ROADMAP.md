@@ -13,7 +13,7 @@ Do not mark a milestone complete until its acceptance criteria have been checked
 
 ## Overall sequence
 
-**Build Popcorn first.** Add real providers, skills, and useful user workflows. Resume Popcorn Tasting after Popcorn reaches a functional demonstration.
+Build Popcorn's useful workflows and expand Popcorn Tasting alongside it. Keep the evaluator separate and begin with repeatable offline fixtures; add live model/provider evidence when credentials are available.
 
 Structured observability is included in Popcorn from the start so the separate runner can inspect execution evidence.
 
@@ -212,7 +212,7 @@ Observability should be implemented incrementally in earlier phases; this phase 
 
 ## Phase 6 — Popcorn Tasting: evaluation foundation
 
-**Status:** NOT STARTED — FUTURE
+**Status:** IN PROGRESS — offline fixture runner and report
 
 ### Objectives
 Create an independent evaluation platform, using Popcorn as its first target.
@@ -220,17 +220,19 @@ Create an independent evaluation platform, using Popcorn as its first target.
 ### Candidate tasks
 - [ ] Define language-neutral agent execution contract.
 - [ ] Define test-case format and versioning.
-- [ ] Implement evaluation runner.
-- [ ] Implement agent adapters, beginning with Popcorn.
+- [x] Implement evaluation runner with deterministic fixture and live-agent modes.
+- [x] Add a Popcorn live-agent adapter.
 - [ ] Store runs and results.
-- [ ] Implement deterministic assertions and basic metrics.
-- [ ] Produce JSON and HTML reports.
+- [x] Implement expected skill/tool checks, response rubrics, trace details, and invocation coverage.
+- [x] Produce JSON and standalone HTML reports with commit metadata.
+- [x] Compare current case results to a saved report for pass-to-fail regressions.
+- [ ] Validate live LLM and provider execution with configured credentials.
 
 ### Acceptance criteria
 - [ ] Popcorn can be evaluated through the external contract/adapter.
 - [ ] Evaluator code does not depend on Popcorn's internal modules.
-- [ ] A second mock agent can be evaluated through the same interface.
-- [ ] Results are reproducible enough to compare and inspect.
+- [ ] Demonstrate a second agent through the runner interface.
+- [x] Fixture results are repeatable and inspectable; validate live-run comparison semantics after credentials are configured.
 
 ---
 
@@ -304,4 +306,4 @@ Do not add these to the initial Popcorn milestone without an explicit decision:
 
 ## Current next action
 
-Add `GEMINI_API_KEY` to the Render service environment, set `LLM_PROVIDER=gemini`, and redeploy. Verify the live Gemini tool-calling flow, then expand provider/skill coverage based on the result. DeepSeek remains selectable with `LLM_PROVIDER=deepseek`. Popcorn Tasting remains deferred.
+Run the offline Popcorn Tasting suite and inspect its HTML/JSON artifact. Then, when the LLM API is configured, run the same evaluation cases in live mode, review how actual model choices and provider payloads appear in the trace, and refine the rubric and cross-provider case based on evidence. DeepSeek remains selectable with `LLM_PROVIDER=deepseek`; Gemini remains selectable with `LLM_PROVIDER=gemini`.

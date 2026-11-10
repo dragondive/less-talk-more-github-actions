@@ -194,7 +194,11 @@ async def _call_tool(
             raise RuntimeError(f"MCP tool returned no structured content: {tool_name}")
         if isinstance(structured.get("error"), str):
             raise RuntimeError(structured["error"])
-        return structured.get("result") if set(structured) == {"result"} else structured
+        payload = structured.get("result") if set(structured) == {"result"} else structured
+        # Provider payloads make tool executions auditable in trace exports and
+        # Popcorn Tasting reports. Keep credential-bearing request headers out.
+        event.attributes["response"] = payload
+        return payload
     except Exception:
         event.status = "error"
         raise

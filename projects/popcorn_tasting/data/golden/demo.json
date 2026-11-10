@@ -1,26 +1,31 @@
 {
-  "version": "0.1",
-  "description": "Tiny local fixtures for the first Popcorn end-to-end evaluation.",
+  "version": "0.2",
+  "description": "Offline evaluation scenarios for Popcorn's observable discovery workflow.",
   "cases": [
     {
-      "id": "hello-world",
-      "input": "Hello Maya",
-      "expected_response": "Hello, Maya! Welcome to Popcorn.",
-      "expected_skills": ["greeting"],
-      "expected_tools": ["say_hello"]
-    },
-    {
-      "id": "movie-fit-rubric",
-      "input": "Movie fit: The Matrix",
-      "expected_skills": ["movie_fit"],
-      "expected_tools": ["get_movie_profile"],
+      "id": "movie-discovery-variable-answer",
+      "input": "movie: The Matrix",
+      "expected_skills": ["movie_discovery"],
+      "expected_tools": ["search_movies"],
       "rubric": {
-        "minimum_score": 0.7,
+        "minimum_score": 0.6,
+        "criteria": [
+          {"name": "uses science fiction evidence", "terms": ["science fiction", "sci-fi"], "weight": 0.6},
+          {"name": "uses calibrated wording", "terms": ["may", "might", "could"], "weight": 0.4}
+        ],
         "sample_responses": [
-          "The Matrix could suit action fans. Its science fiction story is intense and fast-paced.",
-          "Action lovers enjoy the dark science fiction tone."
+          "The Matrix could suit fans of science fiction.",
+          "The Matrix is a science fiction film."
         ]
       }
+    },
+    {
+      "id": "movie-to-music-follow-up",
+      "turns": [
+        {"input": "movie: The Matrix", "expected_skills": ["movie_discovery"], "expected_tools": ["search_movies"]},
+        {"input": "Now find music by Radiohead", "expected_skills": ["music_discovery"], "expected_tools": ["search_musicbrainz_artists"], "history_contains": {"user": "The Matrix", "assistant": "science fiction"}}
+      ],
+      "expected_sequence": ["movie_discovery", "music_discovery"]
     }
   ]
 }

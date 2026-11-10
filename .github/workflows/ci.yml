@@ -21,7 +21,15 @@ jobs:
       - name: Install Popcorn and development dependencies
         run: python -m pip install -r requirements-dev.txt
       - name: Run tests
-        run: python -m pytest projects/popcorn/tests
+        run: python -m pytest projects/popcorn/tests projects/popcorn_tasting/tests
+      - name: Run Popcorn Tasting offline fixture evaluation
+        run: python -m popcorn_tasting --mode fixture --output artifacts/evaluation.json --html artifacts/index.html
+      - name: Upload evaluation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: popcorn-tasting-${{ github.sha }}
+          path: artifacts/
       - name: Deploy to Render
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:

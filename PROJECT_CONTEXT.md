@@ -191,7 +191,7 @@ Capabilities discussed:
 
 A critical design requirement is to separate invocation coverage from successful invocation coverage. A tool may have been exercised but failed; these are different outcomes.
 
-The evaluator should communicate with agents through a standard contract or small adapter, not depend on Popcorn's internal Python classes. Future agents could be written in Python, C++, Java or another language.
+The evaluator should communicate with agents through a standard contract or small adapter, not depend on Popcorn's internal Python classes. Future agents could be written in Python, C++, Java or another language. The initial Popcorn Tasting implementation uses an offline fixture runner and a Popcorn live-agent adapter, JSON reports, static HTML, commit metadata, and simple baseline regression comparison. Fixture mode demonstrates evaluator/report behavior only; the live LLM/provider run remains the realistic follow-up once credentials are configured.
 
 ## 10. Initial technology preferences
 
