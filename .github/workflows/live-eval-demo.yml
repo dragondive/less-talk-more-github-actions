@@ -6,7 +6,7 @@ on:
       repetitions:
         description: Repetitions for each version (more runs show more model variation)
         type: choice
-        options: [3, 5]
+        options: ["3", "5"]
         default: "3"
       provider_data:
         description: TMDB source for tool evidence (fixture isolates LLM quality; live checks the external API too)

@@ -500,7 +500,7 @@ def main() -> int:
     parser.add_argument("--mode", choices=("fixture", "mcp", "live", "live-judge"), default="fixture", help="fixture uses fake provider HTTP; mcp uses scripted model decisions with live provider APIs; live uses the configured model and APIs; live-judge repeats live scenarios and scores them with Sarvam as judge")
     parser.add_argument("--case-ids", nargs="+", help="Run only these case IDs (useful for bounded live checks)")
     parser.add_argument("--repetitions", type=int, default=3, help="Live-judge attempts per scenario (1–10; default 3)")
-    parser.add_argument("--inject-regression", action="store_true", help="Demo-only: tell the live agent to skip tools and answer from memory")
+    parser.add_argument("--inject-regression", action="store_true", help="Demo-only: remove the live agent's tool catalog and ask it to answer from memory")
     parser.add_argument("--fixture-provider-data", action="store_true", help="Use a fixed TMDB response while keeping the live LLM, Popcorn skill and in-process MCP server real")
     args = parser.parse_args()
     selected_case_ids = set(args.case_ids) if args.case_ids else None
