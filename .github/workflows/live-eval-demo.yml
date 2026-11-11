@@ -29,6 +29,21 @@ jobs:
           cache-dependency-path: requirements-dev.txt
       - name: Install Popcorn and evaluation dependencies
         run: python -m pip install -r requirements-dev.txt
+      - name: Validate live evaluation credentials
+        id: credentials
+        env:
+          SARVAM_API_KEY: ${{ secrets.SARVAM_API_KEY }}
+          TMDB_ACCESS_TOKEN: ${{ secrets.TMDB_ACCESS_TOKEN }}
+          PROVIDER_DATA: ${{ inputs.provider_data }}
+        run: |
+          if [ -z "$SARVAM_API_KEY" ]; then
+            echo "::error title=Missing GitHub Actions secret::Add SARVAM_API_KEY under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          if [ "$PROVIDER_DATA" = "live" ] && [ -z "$TMDB_ACCESS_TOKEN" ]; then
+            echo "::error title=Missing GitHub Actions secret::Live TMDB mode requires TMDB_ACCESS_TOKEN under Settings > Secrets and variables > Actions. Choose fixture mode to avoid this TMDB credential."
+            exit 1
+          fi
       - name: Run passing baseline with live Sarvam and Popcorn MCP
         id: baseline
         continue-on-error: true
@@ -65,7 +80,7 @@ jobs:
           if [ "$FIXTURE_PROVIDER_DATA" = "true" ]; then provider_flag=--fixture-provider-data; else provider_flag=; fi
           python -m popcorn_tasting --mode live-judge --dataset projects/popcorn_tasting/data/golden/live_judge_demo.json --repetitions "${{ inputs.repetitions }}" $provider_flag --baseline artifacts/live-regression.json --output artifacts/live-recovery.json
       - name: Upload all live judge reports
-        if: always()
+        if: always() && hashFiles('artifacts/live-*.json') != ''
         uses: actions/upload-artifact@v4
         with:
           name: popcorn-live-judge-${{ github.run_id }}
@@ -107,7 +122,7 @@ jobs:
           git -C /tmp/popcorn-live-history commit -m "Publish live LLM judge demo results"
           git -C /tmp/popcorn-live-history push --force origin HEAD:eval-history
       - name: Verify the demo showed failure and recovery
-        if: always()
+        if: always() && steps.credentials.outcome == 'success'
         env:
           BASELINE_OUTCOME: ${{ steps.baseline.outcome }}
           REGRESSION_OUTCOME: ${{ steps.regression.outcome }}
