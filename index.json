@@ -1,0 +1,1659 @@
+{
+  "schema_version": 1,
+  "limit": 10,
+  "runs": [
+    {
+      "id": "42971587843",
+      "commit": "f0c80f246cc7b8a8657d47443126c32c96b1791d",
+      "created_at": "2026-11-11T06:19:34+00:00",
+      "run_url": "https://github.com/dragondive/less-talk-more-github-actions/actions/runs/42971587843",
+      "path": "runs/42971587843-f0c80f24.json.gz",
+      "mode": "fixture",
+      "report_type": "evaluation",
+      "passed": true,
+      "passed_cases": 98,
+      "case_count": 98,
+      "unit_test_count": 0,
+      "unit_test_passed": null,
+      "coverage": {
+        "mcp_tool": {
+          "get_anilist_character_details": {
+            "expected": 2,
+            "attempted": 2,
+            "succeeded": 2,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_anilist_media_details": {
+            "expected": 31,
+            "attempted": 31,
+            "succeeded": 31,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_anilist_staff_details": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_lastfm_recommendations": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_movie_details": {
+            "expected": 32,
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_musicbrainz_artist": {
+            "expected": 30,
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_musicbrainz_artist_release_groups": {
+            "expected": 30,
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_person_combined_credits": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_tv_details": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_anilist_characters": {
+            "expected": 2,
+            "attempted": 2,
+            "succeeded": 2,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_anilist_media": {
+            "expected": 31,
+            "attempted": 31,
+            "succeeded": 31,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_anilist_staff": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_movies": {
+            "expected": 32,
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_musicbrainz_artists": {
+            "expected": 32,
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_people": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_tv": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          }
+        },
+        "skill": {
+          "actor_filmography": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "anilist_character_exploration": {
+            "expected": 2,
+            "attempted": 2,
+            "succeeded": 2,
+            "failed": 0,
+            "percent": 100
+          },
+          "anilist_relation_exploration": {
+            "expected": 6,
+            "attempted": 6,
+            "succeeded": 6,
+            "failed": 0,
+            "percent": 100
+          },
+          "anilist_staff_exploration": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "anime_manga_discovery": {
+            "expected": 25,
+            "attempted": 25,
+            "succeeded": 25,
+            "failed": 0,
+            "percent": 100
+          },
+          "movie_discovery": {
+            "expected": 32,
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0,
+            "percent": 100
+          },
+          "music_discovery": {
+            "expected": 32,
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0,
+            "percent": 100
+          },
+          "music_recommendations": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "tv_discovery": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          }
+        },
+        "provider_api": {
+          "TMDB GET /3/search/movie": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "TMDB GET /3/movie/603": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "MusicBrainz GET /ws/2/artist/": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "MusicBrainz GET /ws/2/artist/12345678-1234-1234-1234-123456789abc": {
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0
+          },
+          "MusicBrainz GET /ws/2/release-group/": {
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0
+          },
+          "AniList POST /": {
+            "attempted": 68,
+            "succeeded": 68,
+            "failed": 0
+          },
+          "TMDB GET /3/search/tv": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "TMDB GET /3/tv/1399": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "TMDB GET /3/search/person": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "TMDB GET /3/person/6384/combined_credits": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "Last.fm GET /2.0/": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          }
+        },
+        "flow": {
+          "actor_filmography \u2192 get_person_combined_credits \u2192 TMDB GET /3/person/6384/combined_credits": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "actor_filmography \u2192 search_people \u2192 TMDB GET /3/search/person": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "anilist_character_exploration \u2192 get_anilist_character_details \u2192 AniList POST /": {
+            "attempted": 2,
+            "succeeded": 2,
+            "failed": 0
+          },
+          "anilist_character_exploration \u2192 search_anilist_characters \u2192 AniList POST /": {
+            "attempted": 2,
+            "succeeded": 2,
+            "failed": 0
+          },
+          "anilist_relation_exploration \u2192 get_anilist_media_details \u2192 AniList POST /": {
+            "attempted": 6,
+            "succeeded": 6,
+            "failed": 0
+          },
+          "anilist_relation_exploration \u2192 search_anilist_media \u2192 AniList POST /": {
+            "attempted": 6,
+            "succeeded": 6,
+            "failed": 0
+          },
+          "anilist_staff_exploration \u2192 get_anilist_staff_details \u2192 AniList POST /": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "anilist_staff_exploration \u2192 search_anilist_staff \u2192 AniList POST /": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "anime_manga_discovery \u2192 get_anilist_media_details \u2192 AniList POST /": {
+            "attempted": 25,
+            "succeeded": 25,
+            "failed": 0
+          },
+          "anime_manga_discovery \u2192 search_anilist_media \u2192 AniList POST /": {
+            "attempted": 25,
+            "succeeded": 25,
+            "failed": 0
+          },
+          "movie_discovery \u2192 get_movie_details \u2192 TMDB GET /3/movie/603": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "movie_discovery \u2192 search_movies \u2192 TMDB GET /3/search/movie": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "music_discovery \u2192 get_musicbrainz_artist \u2192 MusicBrainz GET /ws/2/artist/12345678-1234-1234-1234-123456789abc": {
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0
+          },
+          "music_discovery \u2192 get_musicbrainz_artist_release_groups \u2192 MusicBrainz GET /ws/2/release-group/": {
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0
+          },
+          "music_discovery \u2192 search_musicbrainz_artists \u2192 MusicBrainz GET /ws/2/artist/": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "music_recommendations \u2192 get_lastfm_recommendations \u2192 Last.fm GET /2.0/": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "tv_discovery \u2192 get_tv_details \u2192 TMDB GET /3/tv/1399": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "tv_discovery \u2192 search_tv \u2192 TMDB GET /3/search/tv": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "42964922160",
+      "commit": "edde43efd7dd08f81ee5942e3d384b23ad018238",
+      "created_at": "2026-11-11T05:20:02+00:00",
+      "run_url": "https://github.com/dragondive/less-talk-more-github-actions/actions/runs/42964922160",
+      "path": "runs/42964922160-edde43ef.json.gz",
+      "mode": "full-evaluation",
+      "report_type": "full-evaluation",
+      "passed": true,
+      "passed_cases": 99,
+      "case_count": 99,
+      "unit_test_count": 106,
+      "unit_test_passed": true,
+      "coverage": {
+        "mcp_tool": {
+          "get_anilist_character_details": {
+            "expected": 2,
+            "attempted": 2,
+            "succeeded": 2,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_anilist_media_details": {
+            "expected": 31,
+            "attempted": 31,
+            "succeeded": 31,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_anilist_staff_details": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_lastfm_recommendations": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_movie_details": {
+            "expected": 32,
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_musicbrainz_artist": {
+            "expected": 30,
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_musicbrainz_artist_release_groups": {
+            "expected": 30,
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_person_combined_credits": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_tv_details": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_anilist_characters": {
+            "expected": 2,
+            "attempted": 2,
+            "succeeded": 2,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_anilist_media": {
+            "expected": 31,
+            "attempted": 31,
+            "succeeded": 31,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_anilist_staff": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_movies": {
+            "expected": 32,
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_musicbrainz_artists": {
+            "expected": 32,
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_people": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_tv": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          }
+        },
+        "skill": {
+          "actor_filmography": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "anilist_character_exploration": {
+            "expected": 2,
+            "attempted": 2,
+            "succeeded": 2,
+            "failed": 0,
+            "percent": 100
+          },
+          "anilist_relation_exploration": {
+            "expected": 6,
+            "attempted": 6,
+            "succeeded": 6,
+            "failed": 0,
+            "percent": 100
+          },
+          "anilist_staff_exploration": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "anime_manga_discovery": {
+            "expected": 25,
+            "attempted": 25,
+            "succeeded": 25,
+            "failed": 0,
+            "percent": 100
+          },
+          "movie_discovery": {
+            "expected": 32,
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0,
+            "percent": 100
+          },
+          "music_discovery": {
+            "expected": 32,
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0,
+            "percent": 100
+          },
+          "music_recommendations": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "tv_discovery": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          }
+        },
+        "provider_api": {
+          "TMDB GET /3/search/movie": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "TMDB GET /3/movie/603": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "MusicBrainz GET /ws/2/artist/": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "MusicBrainz GET /ws/2/artist/12345678-1234-1234-1234-123456789abc": {
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0
+          },
+          "MusicBrainz GET /ws/2/release-group/": {
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0
+          },
+          "AniList POST /": {
+            "attempted": 68,
+            "succeeded": 68,
+            "failed": 0
+          },
+          "TMDB GET /3/search/tv": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "TMDB GET /3/tv/1399": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "TMDB GET /3/search/person": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "TMDB GET /3/person/6384/combined_credits": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "Last.fm GET /2.0/": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          }
+        },
+        "flow": {
+          "actor_filmography \u2192 get_person_combined_credits \u2192 TMDB GET /3/person/6384/combined_credits": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "actor_filmography \u2192 search_people \u2192 TMDB GET /3/search/person": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "anilist_character_exploration \u2192 get_anilist_character_details \u2192 AniList POST /": {
+            "attempted": 2,
+            "succeeded": 2,
+            "failed": 0
+          },
+          "anilist_character_exploration \u2192 search_anilist_characters \u2192 AniList POST /": {
+            "attempted": 2,
+            "succeeded": 2,
+            "failed": 0
+          },
+          "anilist_relation_exploration \u2192 get_anilist_media_details \u2192 AniList POST /": {
+            "attempted": 6,
+            "succeeded": 6,
+            "failed": 0
+          },
+          "anilist_relation_exploration \u2192 search_anilist_media \u2192 AniList POST /": {
+            "attempted": 6,
+            "succeeded": 6,
+            "failed": 0
+          },
+          "anilist_staff_exploration \u2192 get_anilist_staff_details \u2192 AniList POST /": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "anilist_staff_exploration \u2192 search_anilist_staff \u2192 AniList POST /": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "anime_manga_discovery \u2192 get_anilist_media_details \u2192 AniList POST /": {
+            "attempted": 25,
+            "succeeded": 25,
+            "failed": 0
+          },
+          "anime_manga_discovery \u2192 search_anilist_media \u2192 AniList POST /": {
+            "attempted": 25,
+            "succeeded": 25,
+            "failed": 0
+          },
+          "movie_discovery \u2192 get_movie_details \u2192 TMDB GET /3/movie/603": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "movie_discovery \u2192 search_movies \u2192 TMDB GET /3/search/movie": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "music_discovery \u2192 get_musicbrainz_artist \u2192 MusicBrainz GET /ws/2/artist/12345678-1234-1234-1234-123456789abc": {
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0
+          },
+          "music_discovery \u2192 get_musicbrainz_artist_release_groups \u2192 MusicBrainz GET /ws/2/release-group/": {
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0
+          },
+          "music_discovery \u2192 search_musicbrainz_artists \u2192 MusicBrainz GET /ws/2/artist/": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "music_recommendations \u2192 get_lastfm_recommendations \u2192 Last.fm GET /2.0/": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "tv_discovery \u2192 get_tv_details \u2192 TMDB GET /3/tv/1399": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "tv_discovery \u2192 search_tv \u2192 TMDB GET /3/search/tv": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "42963804006",
+      "commit": "edde43efd7dd08f81ee5942e3d384b23ad018238",
+      "created_at": "2026-11-11T05:09:17+00:00",
+      "run_url": "https://github.com/dragondive/less-talk-more-github-actions/actions/runs/42963804006",
+      "path": "runs/42963804006-edde43ef.json.gz",
+      "mode": "fixture",
+      "report_type": "evaluation",
+      "passed": true,
+      "passed_cases": 98,
+      "case_count": 98,
+      "unit_test_count": 0,
+      "unit_test_passed": null,
+      "coverage": {
+        "mcp_tool": {
+          "get_anilist_character_details": {
+            "expected": 2,
+            "attempted": 2,
+            "succeeded": 2,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_anilist_media_details": {
+            "expected": 31,
+            "attempted": 31,
+            "succeeded": 31,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_anilist_staff_details": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_lastfm_recommendations": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_movie_details": {
+            "expected": 32,
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_musicbrainz_artist": {
+            "expected": 30,
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_musicbrainz_artist_release_groups": {
+            "expected": 30,
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_person_combined_credits": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_tv_details": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_anilist_characters": {
+            "expected": 2,
+            "attempted": 2,
+            "succeeded": 2,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_anilist_media": {
+            "expected": 31,
+            "attempted": 31,
+            "succeeded": 31,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_anilist_staff": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_movies": {
+            "expected": 32,
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_musicbrainz_artists": {
+            "expected": 32,
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_people": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_tv": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          }
+        },
+        "skill": {
+          "actor_filmography": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "anilist_character_exploration": {
+            "expected": 2,
+            "attempted": 2,
+            "succeeded": 2,
+            "failed": 0,
+            "percent": 100
+          },
+          "anilist_relation_exploration": {
+            "expected": 6,
+            "attempted": 6,
+            "succeeded": 6,
+            "failed": 0,
+            "percent": 100
+          },
+          "anilist_staff_exploration": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "anime_manga_discovery": {
+            "expected": 25,
+            "attempted": 25,
+            "succeeded": 25,
+            "failed": 0,
+            "percent": 100
+          },
+          "movie_discovery": {
+            "expected": 32,
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0,
+            "percent": 100
+          },
+          "music_discovery": {
+            "expected": 32,
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0,
+            "percent": 100
+          },
+          "music_recommendations": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "tv_discovery": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          }
+        },
+        "provider_api": {
+          "TMDB GET /3/search/movie": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "TMDB GET /3/movie/603": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "MusicBrainz GET /ws/2/artist/": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "MusicBrainz GET /ws/2/artist/12345678-1234-1234-1234-123456789abc": {
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0
+          },
+          "MusicBrainz GET /ws/2/release-group/": {
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0
+          },
+          "AniList POST /": {
+            "attempted": 68,
+            "succeeded": 68,
+            "failed": 0
+          },
+          "TMDB GET /3/search/tv": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "TMDB GET /3/tv/1399": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "TMDB GET /3/search/person": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "TMDB GET /3/person/6384/combined_credits": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "Last.fm GET /2.0/": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          }
+        },
+        "flow": {
+          "actor_filmography \u2192 get_person_combined_credits \u2192 TMDB GET /3/person/6384/combined_credits": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "actor_filmography \u2192 search_people \u2192 TMDB GET /3/search/person": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "anilist_character_exploration \u2192 get_anilist_character_details \u2192 AniList POST /": {
+            "attempted": 2,
+            "succeeded": 2,
+            "failed": 0
+          },
+          "anilist_character_exploration \u2192 search_anilist_characters \u2192 AniList POST /": {
+            "attempted": 2,
+            "succeeded": 2,
+            "failed": 0
+          },
+          "anilist_relation_exploration \u2192 get_anilist_media_details \u2192 AniList POST /": {
+            "attempted": 6,
+            "succeeded": 6,
+            "failed": 0
+          },
+          "anilist_relation_exploration \u2192 search_anilist_media \u2192 AniList POST /": {
+            "attempted": 6,
+            "succeeded": 6,
+            "failed": 0
+          },
+          "anilist_staff_exploration \u2192 get_anilist_staff_details \u2192 AniList POST /": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "anilist_staff_exploration \u2192 search_anilist_staff \u2192 AniList POST /": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "anime_manga_discovery \u2192 get_anilist_media_details \u2192 AniList POST /": {
+            "attempted": 25,
+            "succeeded": 25,
+            "failed": 0
+          },
+          "anime_manga_discovery \u2192 search_anilist_media \u2192 AniList POST /": {
+            "attempted": 25,
+            "succeeded": 25,
+            "failed": 0
+          },
+          "movie_discovery \u2192 get_movie_details \u2192 TMDB GET /3/movie/603": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "movie_discovery \u2192 search_movies \u2192 TMDB GET /3/search/movie": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "music_discovery \u2192 get_musicbrainz_artist \u2192 MusicBrainz GET /ws/2/artist/12345678-1234-1234-1234-123456789abc": {
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0
+          },
+          "music_discovery \u2192 get_musicbrainz_artist_release_groups \u2192 MusicBrainz GET /ws/2/release-group/": {
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0
+          },
+          "music_discovery \u2192 search_musicbrainz_artists \u2192 MusicBrainz GET /ws/2/artist/": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "music_recommendations \u2192 get_lastfm_recommendations \u2192 Last.fm GET /2.0/": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "tv_discovery \u2192 get_tv_details \u2192 TMDB GET /3/tv/1399": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "tv_discovery \u2192 search_tv \u2192 TMDB GET /3/search/tv": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "42960631591-baseline",
+      "commit": "3b3a66209bfb0f16bcb4275571224adfec7968d9",
+      "created_at": "2026-11-11T04:41:38+00:00",
+      "run_url": "https://github.com/dragondive/less-talk-more-github-actions/actions/runs/42960631591",
+      "path": "runs/42960631591-baseline-3b3a6620.json.gz",
+      "mode": "live-judge",
+      "passed": true,
+      "passed_cases": 1,
+      "case_count": 1,
+      "coverage": {
+        "mcp_tool": {
+          "get_movie_details": {
+            "expected": 1,
+            "attempted": 5,
+            "succeeded": 5,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_movies": {
+            "expected": 1,
+            "attempted": 5,
+            "succeeded": 5,
+            "failed": 0,
+            "percent": 100
+          }
+        },
+        "skill": {
+          "movie_discovery": {
+            "expected": 1,
+            "attempted": 5,
+            "succeeded": 5,
+            "failed": 0,
+            "percent": 100
+          }
+        },
+        "provider_api": {
+          "TMDB GET /3/search/movie": {
+            "attempted": 5,
+            "succeeded": 5,
+            "failed": 0
+          },
+          "TMDB GET /3/movie/419430": {
+            "attempted": 5,
+            "succeeded": 5,
+            "failed": 0
+          }
+        },
+        "flow": {
+          "movie_discovery \u2192 get_movie_details \u2192 TMDB GET /3/movie/419430": {
+            "attempted": 5,
+            "succeeded": 5,
+            "failed": 0
+          },
+          "movie_discovery \u2192 search_movies \u2192 TMDB GET /3/search/movie": {
+            "attempted": 5,
+            "succeeded": 5,
+            "failed": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "42960631591-regression",
+      "commit": "3b3a66209bfb0f16bcb4275571224adfec7968d9",
+      "created_at": "2026-11-11T04:41:38+00:00",
+      "run_url": "https://github.com/dragondive/less-talk-more-github-actions/actions/runs/42960631591",
+      "path": "runs/42960631591-regression-3b3a6620.json.gz",
+      "mode": "live-judge",
+      "passed": false,
+      "passed_cases": 0,
+      "case_count": 1,
+      "coverage": {
+        "mcp_tool": {
+          "get_movie_details": {
+            "expected": 1,
+            "attempted": 0,
+            "succeeded": 0,
+            "failed": 0,
+            "percent": 0
+          },
+          "search_movies": {
+            "expected": 1,
+            "attempted": 0,
+            "succeeded": 0,
+            "failed": 0,
+            "percent": 0
+          }
+        },
+        "skill": {
+          "movie_discovery": {
+            "expected": 1,
+            "attempted": 0,
+            "succeeded": 0,
+            "failed": 0,
+            "percent": 0
+          }
+        },
+        "flow": {}
+      }
+    },
+    {
+      "id": "42960631591-recovery",
+      "commit": "3b3a66209bfb0f16bcb4275571224adfec7968d9",
+      "created_at": "2026-11-11T04:41:38+00:00",
+      "run_url": "https://github.com/dragondive/less-talk-more-github-actions/actions/runs/42960631591",
+      "path": "runs/42960631591-recovery-3b3a6620.json.gz",
+      "mode": "live-judge",
+      "passed": true,
+      "passed_cases": 1,
+      "case_count": 1,
+      "coverage": {
+        "mcp_tool": {
+          "get_movie_details": {
+            "expected": 1,
+            "attempted": 5,
+            "succeeded": 5,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_movies": {
+            "expected": 1,
+            "attempted": 5,
+            "succeeded": 5,
+            "failed": 0,
+            "percent": 100
+          }
+        },
+        "skill": {
+          "movie_discovery": {
+            "expected": 1,
+            "attempted": 5,
+            "succeeded": 5,
+            "failed": 0,
+            "percent": 100
+          }
+        },
+        "provider_api": {
+          "TMDB GET /3/search/movie": {
+            "attempted": 5,
+            "succeeded": 5,
+            "failed": 0
+          },
+          "TMDB GET /3/movie/419430": {
+            "attempted": 5,
+            "succeeded": 5,
+            "failed": 0
+          }
+        },
+        "flow": {
+          "movie_discovery \u2192 get_movie_details \u2192 TMDB GET /3/movie/419430": {
+            "attempted": 5,
+            "succeeded": 5,
+            "failed": 0
+          },
+          "movie_discovery \u2192 search_movies \u2192 TMDB GET /3/search/movie": {
+            "attempted": 5,
+            "succeeded": 5,
+            "failed": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "42959604785",
+      "commit": "3b3a66209bfb0f16bcb4275571224adfec7968d9",
+      "created_at": "2026-11-11T04:30:17+00:00",
+      "run_url": "https://github.com/dragondive/less-talk-more-github-actions/actions/runs/42959604785",
+      "path": "runs/42959604785-3b3a6620.json.gz",
+      "mode": "fixture",
+      "passed": true,
+      "passed_cases": 98,
+      "case_count": 98,
+      "coverage": {
+        "mcp_tool": {
+          "get_anilist_character_details": {
+            "expected": 2,
+            "attempted": 2,
+            "succeeded": 2,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_anilist_media_details": {
+            "expected": 31,
+            "attempted": 31,
+            "succeeded": 31,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_anilist_staff_details": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_lastfm_recommendations": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_movie_details": {
+            "expected": 32,
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_musicbrainz_artist": {
+            "expected": 30,
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_musicbrainz_artist_release_groups": {
+            "expected": 30,
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_person_combined_credits": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "get_tv_details": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_anilist_characters": {
+            "expected": 2,
+            "attempted": 2,
+            "succeeded": 2,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_anilist_media": {
+            "expected": 31,
+            "attempted": 31,
+            "succeeded": 31,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_anilist_staff": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_movies": {
+            "expected": 32,
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_musicbrainz_artists": {
+            "expected": 32,
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_people": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "search_tv": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          }
+        },
+        "skill": {
+          "actor_filmography": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "anilist_character_exploration": {
+            "expected": 2,
+            "attempted": 2,
+            "succeeded": 2,
+            "failed": 0,
+            "percent": 100
+          },
+          "anilist_relation_exploration": {
+            "expected": 6,
+            "attempted": 6,
+            "succeeded": 6,
+            "failed": 0,
+            "percent": 100
+          },
+          "anilist_staff_exploration": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "anime_manga_discovery": {
+            "expected": 25,
+            "attempted": 25,
+            "succeeded": 25,
+            "failed": 0,
+            "percent": 100
+          },
+          "movie_discovery": {
+            "expected": 32,
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0,
+            "percent": 100
+          },
+          "music_discovery": {
+            "expected": 32,
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0,
+            "percent": 100
+          },
+          "music_recommendations": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          },
+          "tv_discovery": {
+            "expected": 1,
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "percent": 100
+          }
+        },
+        "provider_api": {
+          "TMDB GET /3/search/movie": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "TMDB GET /3/movie/603": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "MusicBrainz GET /ws/2/artist/": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "MusicBrainz GET /ws/2/artist/12345678-1234-1234-1234-123456789abc": {
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0
+          },
+          "MusicBrainz GET /ws/2/release-group/": {
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0
+          },
+          "AniList POST /": {
+            "attempted": 68,
+            "succeeded": 68,
+            "failed": 0
+          },
+          "TMDB GET /3/search/tv": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "TMDB GET /3/tv/1399": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "TMDB GET /3/search/person": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "TMDB GET /3/person/6384/combined_credits": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "Last.fm GET /2.0/": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          }
+        },
+        "flow": {
+          "actor_filmography \u2192 get_person_combined_credits \u2192 TMDB GET /3/person/6384/combined_credits": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "actor_filmography \u2192 search_people \u2192 TMDB GET /3/search/person": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "anilist_character_exploration \u2192 get_anilist_character_details \u2192 AniList POST /": {
+            "attempted": 2,
+            "succeeded": 2,
+            "failed": 0
+          },
+          "anilist_character_exploration \u2192 search_anilist_characters \u2192 AniList POST /": {
+            "attempted": 2,
+            "succeeded": 2,
+            "failed": 0
+          },
+          "anilist_relation_exploration \u2192 get_anilist_media_details \u2192 AniList POST /": {
+            "attempted": 6,
+            "succeeded": 6,
+            "failed": 0
+          },
+          "anilist_relation_exploration \u2192 search_anilist_media \u2192 AniList POST /": {
+            "attempted": 6,
+            "succeeded": 6,
+            "failed": 0
+          },
+          "anilist_staff_exploration \u2192 get_anilist_staff_details \u2192 AniList POST /": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "anilist_staff_exploration \u2192 search_anilist_staff \u2192 AniList POST /": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "anime_manga_discovery \u2192 get_anilist_media_details \u2192 AniList POST /": {
+            "attempted": 25,
+            "succeeded": 25,
+            "failed": 0
+          },
+          "anime_manga_discovery \u2192 search_anilist_media \u2192 AniList POST /": {
+            "attempted": 25,
+            "succeeded": 25,
+            "failed": 0
+          },
+          "movie_discovery \u2192 get_movie_details \u2192 TMDB GET /3/movie/603": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "movie_discovery \u2192 search_movies \u2192 TMDB GET /3/search/movie": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "music_discovery \u2192 get_musicbrainz_artist \u2192 MusicBrainz GET /ws/2/artist/12345678-1234-1234-1234-123456789abc": {
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0
+          },
+          "music_discovery \u2192 get_musicbrainz_artist_release_groups \u2192 MusicBrainz GET /ws/2/release-group/": {
+            "attempted": 30,
+            "succeeded": 30,
+            "failed": 0
+          },
+          "music_discovery \u2192 search_musicbrainz_artists \u2192 MusicBrainz GET /ws/2/artist/": {
+            "attempted": 32,
+            "succeeded": 32,
+            "failed": 0
+          },
+          "music_recommendations \u2192 get_lastfm_recommendations \u2192 Last.fm GET /2.0/": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "tv_discovery \u2192 get_tv_details \u2192 TMDB GET /3/tv/1399": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          },
+          "tv_discovery \u2192 search_tv \u2192 TMDB GET /3/search/tv": {
+            "attempted": 1,
+            "succeeded": 1,
+            "failed": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "42958204733-baseline",
+      "commit": "a98816b2e93ae0658dcd57ff31a6c4bf45aded36",
+      "created_at": "2026-11-11T04:17:18+00:00",
+      "run_url": "https://github.com/dragondive/less-talk-more-github-actions/actions/runs/42958204733",
+      "path": "runs/42958204733-baseline-a98816b2.json.gz",
+      "mode": "live-judge",
+      "passed": false,
+      "passed_cases": 0,
+      "case_count": 1,
+      "coverage": {
+        "mcp_tool": {
+          "get_movie_details": {
+            "expected": 1,
+            "attempted": 0,
+            "succeeded": 0,
+            "failed": 0,
+            "percent": 0
+          },
+          "search_movies": {
+            "expected": 1,
+            "attempted": 0,
+            "succeeded": 0,
+            "failed": 0,
+            "percent": 0
+          }
+        },
+        "skill": {
+          "movie_discovery": {
+            "expected": 1,
+            "attempted": 0,
+            "succeeded": 0,
+            "failed": 0,
+            "percent": 0
+          }
+        },
+        "flow": {}
+      }
+    },
+    {
+      "id": "42958204733-regression",
+      "commit": "a98816b2e93ae0658dcd57ff31a6c4bf45aded36",
+      "created_at": "2026-11-11T04:17:18+00:00",
+      "run_url": "https://github.com/dragondive/less-talk-more-github-actions/actions/runs/42958204733",
+      "path": "runs/42958204733-regression-a98816b2.json.gz",
+      "mode": "live-judge",
+      "passed": false,
+      "passed_cases": 0,
+      "case_count": 1,
+      "coverage": {
+        "mcp_tool": {
+          "get_movie_details": {
+            "expected": 1,
+            "attempted": 0,
+            "succeeded": 0,
+            "failed": 0,
+            "percent": 0
+          },
+          "search_movies": {
+            "expected": 1,
+            "attempted": 0,
+            "succeeded": 0,
+            "failed": 0,
+            "percent": 0
+          }
+        },
+        "skill": {
+          "movie_discovery": {
+            "expected": 1,
+            "attempted": 0,
+            "succeeded": 0,
+            "failed": 0,
+            "percent": 0
+          }
+        },
+        "flow": {}
+      }
+    },
+    {
+      "id": "42958204733-recovery",
+      "commit": "a98816b2e93ae0658dcd57ff31a6c4bf45aded36",
+      "created_at": "2026-11-11T04:17:18+00:00",
+      "run_url": "https://github.com/dragondive/less-talk-more-github-actions/actions/runs/42958204733",
+      "path": "runs/42958204733-recovery-a98816b2.json.gz",
+      "mode": "live-judge",
+      "passed": false,
+      "passed_cases": 0,
+      "case_count": 1,
+      "coverage": {
+        "mcp_tool": {
+          "get_movie_details": {
+            "expected": 1,
+            "attempted": 0,
+            "succeeded": 0,
+            "failed": 0,
+            "percent": 0
+          },
+          "search_movies": {
+            "expected": 1,
+            "attempted": 0,
+            "succeeded": 0,
+            "failed": 0,
+            "percent": 0
+          }
+        },
+        "skill": {
+          "movie_discovery": {
+            "expected": 1,
+            "attempted": 0,
+            "succeeded": 0,
+            "failed": 0,
+            "percent": 0
+          }
+        },
+        "flow": {}
+      }
+    }
+  ]
+}
