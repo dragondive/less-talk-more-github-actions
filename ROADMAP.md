@@ -78,6 +78,7 @@ Create the smallest runnable agent foundation.
 - [x] Add Sarvam as the selected model provider while retaining Gemini and DeepSeek.
 - [ ] Configure the Sarvam API key on Render and validate live model-to-skill-to-MCP flow.
 - [x] Add an opt-in Sarvam live answer and LLM judge baseline/regression/recovery demonstration.
+- [x] Group Python test results, all offline AI scenarios, and the live judge regression sequence into one manual `/tests` dashboard run.
 
 ---
 

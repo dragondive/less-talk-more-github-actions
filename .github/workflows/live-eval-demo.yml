@@ -1,4 +1,4 @@
-name: Popcorn Live LLM Judge Demo
+name: Popcorn Full Evaluation Demo
 
 on:
   workflow_dispatch:
@@ -29,6 +29,16 @@ jobs:
           cache-dependency-path: requirements-dev.txt
       - name: Install Popcorn and evaluation dependencies
         run: python -m pip install -r requirements-dev.txt
+      - name: Run all Python tests
+        id: unit-tests
+        continue-on-error: true
+        run: |
+          mkdir -p artifacts
+          python -m pytest projects/popcorn/tests projects/popcorn_tasting/tests --junitxml=artifacts/unit-tests.xml
+      - name: Run all offline AI evaluation scenarios
+        id: offline-evaluation
+        continue-on-error: true
+        run: python -m popcorn_tasting --mode fixture --output artifacts/offline-evaluation.json
       - name: Validate live evaluation credentials
         id: credentials
         env:
@@ -79,15 +89,27 @@ jobs:
         run: |
           if [ "$FIXTURE_PROVIDER_DATA" = "true" ]; then provider_flag=--fixture-provider-data; else provider_flag=; fi
           python -m popcorn_tasting --mode live-judge --dataset projects/popcorn_tasting/data/golden/live_judge_demo.json --repetitions "${{ inputs.repetitions }}" $provider_flag --baseline artifacts/live-regression.json --output artifacts/live-recovery.json
-      - name: Upload all live judge reports
-        if: always() && hashFiles('artifacts/live-*.json') != ''
+      - name: Combine all evaluation results for the dashboard
+        id: full-report
+        if: always() && steps.credentials.outcome == 'success' && hashFiles('artifacts/unit-tests.xml', 'artifacts/offline-evaluation.json', 'artifacts/live-baseline.json', 'artifacts/live-regression.json', 'artifacts/live-recovery.json') != ''
+        continue-on-error: true
+        run: |
+          python -m popcorn_tasting.full_report \
+            --junit artifacts/unit-tests.xml \
+            --offline artifacts/offline-evaluation.json \
+            --baseline artifacts/live-baseline.json \
+            --regression artifacts/live-regression.json \
+            --recovery artifacts/live-recovery.json \
+            --output artifacts/full-evaluation.json
+      - name: Upload full evaluation reports
+        if: always() && hashFiles('artifacts/**') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: popcorn-live-judge-${{ github.run_id }}
-          path: artifacts/live-*.json
+          name: popcorn-full-evaluation-${{ github.run_id }}
+          path: artifacts/**
           if-no-files-found: error
-      - name: Publish baseline, regression, and recovery to dashboard history
-        if: always() && hashFiles('artifacts/live-*.json') != ''
+      - name: Publish the unified report to dashboard history
+        if: always() && hashFiles('artifacts/full-evaluation.json') != ''
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_RUN_ID: ${{ github.run_id }}
@@ -103,32 +125,35 @@ jobs:
             git -C /tmp/popcorn-live-history checkout --orphan eval-history
             git -C /tmp/popcorn-live-history rm -rf --ignore-unmatch .
           fi
-          for variant in baseline regression recovery; do
-            report="artifacts/live-${variant}.json"
-            if [ -f "$report" ]; then
-              python -m popcorn_tasting.history \
-                --history-dir /tmp/popcorn-live-history \
-                --report "$report" \
-                --run-id "${GITHUB_RUN_ID}-${variant}" \
-                --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
-                --created-at "$(TZ=UTC date --iso-8601=seconds)"
-            fi
-          done
+          python -m popcorn_tasting.history \
+            --history-dir /tmp/popcorn-live-history \
+            --report artifacts/full-evaluation.json \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --created-at "$(TZ=UTC date --iso-8601=seconds)"
           git -C /tmp/popcorn-live-history add index.json runs/
           git -C /tmp/popcorn-live-history config user.name github-actions[bot]
           git -C /tmp/popcorn-live-history config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git -C /tmp/popcorn-live-history checkout --orphan eval-history-snapshot
           git -C /tmp/popcorn-live-history add index.json runs/
-          git -C /tmp/popcorn-live-history commit -m "Publish live LLM judge demo results"
+          git -C /tmp/popcorn-live-history commit -m "Publish full Popcorn evaluation results"
           git -C /tmp/popcorn-live-history push --force origin HEAD:eval-history
-      - name: Verify the demo showed failure and recovery
+      - name: Verify the full evaluation suite
         if: always() && steps.credentials.outcome == 'success'
-        env:
-          BASELINE_OUTCOME: ${{ steps.baseline.outcome }}
-          REGRESSION_OUTCOME: ${{ steps.regression.outcome }}
-          RECOVERY_OUTCOME: ${{ steps.recovery.outcome }}
         run: |
-          echo "Baseline: $BASELINE_OUTCOME; injected regression: $REGRESSION_OUTCOME; recovery: $RECOVERY_OUTCOME"
-          test "$BASELINE_OUTCOME" = success
-          test "$REGRESSION_OUTCOME" = failure
-          test "$RECOVERY_OUTCOME" = success
+          python - <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          report_path = Path("artifacts/full-evaluation.json")
+          if not report_path.exists():
+              raise SystemExit("The unified evaluation report was not generated.")
+          with report_path.open(encoding="utf-8") as report_file:
+              report = json.load(report_file)
+          unit = report["unit_tests"]
+          offline = report["offline_evaluation"]
+          live = report["live_evaluation"]
+          print(f"Unit tests: {unit['passed']}/{unit['total']} passed")
+          print(f"Offline AI scenarios: {offline['case_count']} · passed={offline['passed']}")
+          print(f"Live LLM regression demo: passed={live['passed']} · score drop={live['regression_score_drop']}")
+          sys.exit(0 if report["passed"] else 1)

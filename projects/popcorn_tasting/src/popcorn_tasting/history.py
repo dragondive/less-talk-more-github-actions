@@ -36,9 +36,12 @@ def update_history(history_dir: Path, report_path: Path, *, run_id: str, run_url
         "run_url": run_url,
         "path": f"runs/{name}",
         "mode": report.get("execution_mode", "fixture"),
+        "report_type": report.get("report_type", "evaluation"),
         "passed": bool(report.get("passed")),
         "passed_cases": passed,
         "case_count": len(report.get("results", [])),
+        "unit_test_count": report.get("unit_tests", {}).get("total", 0),
+        "unit_test_passed": report.get("unit_tests", {}).get("passed_all"),
         "coverage": report.get("coverage", {}),
     })
     runs.sort(key=lambda item: item.get("created_at", ""), reverse=True)

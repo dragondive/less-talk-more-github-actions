@@ -35,3 +35,22 @@ def test_history_replaces_retry_of_same_workflow_run(tmp_path):
     update_history(history, report_path, run_id="77", created_at="2026-11-10T00:01:00Z")
     index = json.loads((history / "index.json").read_text())
     assert len(index["runs"]) == 1
+
+
+def test_history_index_exposes_unified_suite_and_unit_test_counts(tmp_path):
+    report_path = tmp_path / "report.json"
+    report_path.write_text(json.dumps({
+        "report_type": "full-evaluation",
+        "execution_mode": "full-evaluation",
+        "commit": "abc123",
+        "passed": True,
+        "coverage": {},
+        "unit_tests": {"total": 101, "passed_all": True},
+        "results": [{"case_id": "offline-1", "passed": True}, {"case_id": "live-1", "passed": True}],
+    }))
+    index = update_history(tmp_path / "history", report_path, run_id="full-1")
+    entry = index["runs"][0]
+    assert entry["report_type"] == "full-evaluation"
+    assert entry["unit_test_count"] == 101
+    assert entry["unit_test_passed"] is True
+    assert entry["case_count"] == 2

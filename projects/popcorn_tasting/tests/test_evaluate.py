@@ -123,6 +123,15 @@ def test_dataset_expansion_has_at_least_80_named_scenarios():
     assert len({case["id"] for case in dataset["cases"]}) == len(dataset["cases"])
 
 
+def test_dashboard_has_one_view_for_pytest_offline_scenarios_and_live_judge():
+    page = (Path(__file__).resolve().parents[2] / "popcorn/src/popcorn/static/tests.html").read_text()
+    assert 'id="unit-test-panel"' in page
+    assert 'id="live-panel"' in page
+    assert "renderUnitTests(a)" in page
+    assert "renderLiveOverview(a)" in page
+    assert "renderLiveVariants(item.live_variants)" in page
+
+
 def test_demo_regression_removes_tool_catalog_and_restores_agent_configuration():
     from popcorn import agent
     from popcorn_tasting.evaluate import _demo_regression_runner
